@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                          String         @id @default(cuid())
+  email                       String         @unique
+  password                    String
+  nom                         String
+  prenom                      String
+  entreprise                  String?
+  siret                       String?
+  numeroTvaIntracommunautaire String?
+  telephone                   String?
+  adresse                     String?
+  codePostal                  String?
+  ville                       String?
+  pays                        String         @default("France")
+  isPremium                   Boolean        @default(false)
+  skipArchiveWarning          Boolean        @default(false)
+  createdAt                   DateTime       @default(now())
+  updatedAt                   DateTime       @updatedAt
+  contacts                    Contact[]
+  genericEmails               GenericEmail[]
+  quotes                      Quote[]
+  services                    Service[]
+  archivedQuotes              ArchivedQuote[]
+  preferences                 UserPreferences?
+
+  @@map("users")
+}
+
+model Contact {
+  id                    String         @id @default(cuid())
+  userId                String
+  nom                   String
+  prenom                String
+  email                 String
+  telephone             String?
+  entreprise            String?
+  poste                 String?
+  siret                 String?
+  adresse               String?
+  codePostal            String?
+  ville                 String?
+  pays                  String         @default("France")
+  statut                ContactStatus  @default(PROSPECT_FROID)
+  scoreValeur           Float          @default(0)
+  chiffresAffairesTotal Float          @default(0)
+  tauxConversion        Float          @default(0)
+  panierMoyen           Float          @default(0)
+  derniereInteraction   DateTime?
+  dernierAchat          DateTime?
+  notes                 String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  genericEmails         GenericEmail[]
+  interactions          Interaction[]
+  quotes                Quote[]
+
+  @@map("contacts")
+}
+
+model Quote {
+  id               String          @id @default(cuid())
+  userId           String
+  contactId        String
+  numero           String          @unique
+  objet            String
+  statut           QuoteStatus     @default(BROUILLON)
+  dateCreation     DateTime        @default(now())
+  dateValidite     DateTime
+  dateEnvoi        DateTime?
+  dateAcceptation  DateTime?
+  dateConsultation DateTime?
+  sousTotal        Float           @default(0)
+  tva              Float           @default(0)
+  total            Float           @default(0)
+  conditions       String?
+  notes            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  emailTracking    EmailTracking[]
+  items            QuoteItem[]
+  contact          Contact         @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id           String   @id @default(cuid())
+  quoteId      String
+  serviceId    String?
+  designation  String
+  description  String?
+  quantite     Float
+  prixUnitaire Float
+  tauxTva      Float    @default(20)
+  total        Float
+  ordre        Int
+  conserver    Boolean  @default(false)
+  quote        Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  service      Service? @relation(fields: [serviceId], references: [id])
+
+  @@map("quote_items")
+}
+
+model Service {
+  id           String      @id @default(cuid())
+  userId       String
+  nom          String
+  description  String?
+  prixUnitaire Float
+  unite        String
+  categorie    String?
+  actif        Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  quoteItems   QuoteItem[]
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("services")
+}
+
+model Interaction {
+  id          String          @id @default(cuid())
+  contactId   String
+  type        InteractionType
+  objet       String?
+  description String?
+  date        DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  contact     Contact         @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@map("interactions")
+}
+
+model EmailTracking {
+  id               String    @id @default(cuid())
+  quoteId          String
+  email            String
+  ouvert           Boolean   @default(false)
+  dateOuverture    DateTime?
+  nombreOuvertures Int       @default(0)
+  clique           Boolean   @default(false)
+  dateClique       DateTime?
+  nombreCliques    Int       @default(0)
+  derniereActivite DateTime?
+  userAgent        String?
+  adresseIP        String?
+  scoreConfiance   Int       @default(0)
+  estBot           Boolean   @default(false)
+  estPrechargement Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  quote            Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@unique([quoteId, email])
+  @@map("email_tracking")
+}
+
+model GenericEmail {
+  id         String    @id @default(cuid())
+  contactId  String
+  userId     String
+  trackingId String    @unique
+  subject    String
+  content    String
+  sentAt     DateTime  @default(now())
+  openedAt   DateTime?
+  isOpened   Boolean   @default(false)
+  openCount  Int       @default(0)
+  contact    Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("generic_emails")
+}
+
+// Archivage permanent des devis lors de suppression de contact
+model ArchivedQuote {
+  id               String    @id @default(cuid())
+  
+  // Données originales du devis
+  originalQuoteId  String    @unique
+  userId           String
+  numero           String
+  objet            String
+  statut           String    // Stocké comme string pour préserver l'état final
+  dateCreation     DateTime
+  dateValidite     DateTime
+  dateEnvoi        DateTime?
+  dateAcceptation  DateTime?
+  dateConsultation DateTime?
+  sousTotal        Float
+  tva              Float
+  total            Float
+  conditions       String?
+  notes            String?
+  
+  // Données du contact (snapshot au moment de l'archivage)
+  contactId        String?   // Optionnel car le contact peut être supprimé
+  contactNom       String
+  contactPrenom    String
+  contactEmail     String
+  contactTelephone String?
+  contactEntreprise String?
+  contactPoste     String?
+  contactAdresse   String?
+  contactCodePostal String?
+  contactVille     String?
+  contactPays      String    @default("France")
+  
+  // Éléments du devis (JSON pour simplicité)
+  items            Json      // Stockage des QuoteItem en JSON
+  
+  // Données d'archivage
+  archivedAt       DateTime  @default(now())
+  archivedReason   String    // "contact_deletion", "manual_archive", "legal_retention"
+  
+  // Relation avec l'utilisateur (conservée)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("archived_quotes")
+}
+
+model UserPreferences {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  businessType          String?  // "freelance", "tpe", "pme", "sarl", "sas", "autre"
+  sector                String?  // "conseil", "design", "dev", "marketing", "autre"
+  siret                 String?
+  annualTarget          Decimal  @default(50000) @db.Decimal(10,2)
+  monthlyTarget         Decimal? @db.Decimal(10,2)
+  followUpFrequency     Int      @default(7) // Jours avant relance
+  emailTemplates        Json?    // Templates d'emails personnalisés
+  notificationSettings  Json     @default("{\"emailAlerts\": true, \"dashboardReminders\": true}")
+  onboardingCompleted   Boolean  @default(false)
+  tutorialProgress      Json     @default("{}")  // Progression des tours
+  tutorialPreferences   Json     @default("{\"showTutorials\": true, \"skippedAll\": false}")  // Préférences tutoriel
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_preferences")
+}
+
+enum ContactStatus {
+  CLIENT_ACTIF
+  PROSPECT_CHAUD
+  PROSPECT_TIEDE
+  PROSPECT_FROID
+  INACTIF
+
+  @@map("contact_status")
+}
+
+enum QuoteStatus {
+  BROUILLON
+  PRET
+  ENVOYE
+  VU
+  ACCEPTE
+  REFUSE
+  EXPIRE
+  TERMINE
+  ARCHIVE
+
+  @@map("quote_status")
+}
+
+enum InteractionType {
+  EMAIL
+  TELEPHONE
+  REUNION
+  DEVIS
+  COMMANDE
+  AUTRE
+
+  @@map("interaction_type")
+}

@@ -1,0 +1,155 @@
+
+
+// Fonction pour envoyer une relance de devis par email
+export const sendQuoteRelanceEmail = async (
+  to: string,
+  subject: string,
+  content: string,
+  quote: QuoteData,
+  pdfBuffer: Buffer
+): Promise<void> => {
+  try {
+    const transporter = createTransporter();
+
+    // Générer les URLs de tracking
+    const pdfFilename = `Devis_${quote.numero}.pdf`;
+    const trackingUrls = generateTrackingUrls(quote.id, to, pdfFilename);
+
+    // Template HTML pour relance (simplifié)
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${subject}</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <div style="text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 20px; margin-bottom: 30px;">
+            <div style="font-size: 24px; font-weight: bold; color: #007bff; margin-bottom: 10px;">VelocitaLeads</div>
+            <div style="background: #ffc107; color: #212529; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; display: inline-block; margin-bottom: 20px;">RELANCE</div>
+            <h1>Rappel concernant votre devis</h1>
+          </div>
+
+          <p>Bonjour ${quote.contact.prenom} ${quote.contact.nom},</p>
+
+          <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 15px; margin: 20px 0; white-space: pre-line;">${content}</div>
+
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #007bff;">Rappel - Details du devis</h3>
+            <p><strong>Numero :</strong> ${quote.numero}</p>
+            <p><strong>Objet :</strong> ${quote.objet}</p>
+            <p><strong>Montant total :</strong> <span style="font-size: 18px; font-weight: bold; color: #28a745;">${quote.total.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}</span></p>
+            <p><strong>Valable jusqu au :</strong> ${quote.dateValidite.toLocaleDateString("fr-FR")}</p>
+          </div>
+
+          <div style="background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 6px; padding: 15px; margin: 20px 0; text-align: center;">
+            <p><strong>Le devis complet est joint a cet email au format PDF.</strong></p>
+          </div>
+
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #6c757d;">
+            <h4>Informations de contact :</h4>
+            <p>
+              <strong>${quote.user.prenom} ${quote.user.nom}</strong><br>
+              ${quote.user.entreprise ? `${quote.user.entreprise}<br>` : ""}
+              Email : <a href="mailto:${quote.user.email}">${quote.user.email}</a><br>
+              ${quote.user.telephone ? `Telephone : ${quote.user.telephone}<br>` : ""}
+            </p>
+          </div>
+        </div>
+        
+        <!-- Pixel de tracking -->
+        <img src="${trackingUrls.pixelUrl}" width="1" height="1" style="display:none;" alt="">
+      </body>
+      </html>
+    `;
+
+    const textContent = `
+Bonjour ${quote.contact.prenom} ${quote.contact.nom},
+
+RELANCE - ${subject}
+
+${content}
+
+RAPPEL - DETAILS DU DEVIS
+=========================
+Numero : ${quote.numero}
+Objet : ${quote.objet}
+Montant total : ${quote.total.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
+Valable jusqu au : ${quote.dateValidite.toLocaleDateString("fr-FR")}
+
+Le devis complet est joint a cet email au format PDF.
+
+INFORMATIONS DE CONTACT
+========================
+${quote.user.prenom} ${quote.user.nom}
+${quote.user.entreprise ? `${quote.user.entreprise}\n` : ""}Email : ${quote.user.email}
+${quote.user.telephone ? `Telephone : ${quote.user.telephone}\n` : ""}
+
+Merci de votre attention,
+L equipe ${quote.user.entreprise || "VelocitaLeads"}
+    `.trim();
+
+    const mailOptions = {
+      from: {
+        name: `${quote.user.prenom} ${quote.user.nom} - ${config.email.from.name}`,
+        address: config.email.from.address,
+      },
+      to,
+      replyTo: quote.user.email,
+      subject,
+      text: textContent,
+      html: htmlContent,
+      attachments: [
+        {
+          filename: `Devis_${quote.numero}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf",
+        },
+      ],
+    };
+
+    // Envoyer l email
+    const info = await transporter.sendMail(mailOptions);
+
+    logEmail(
+      "quote_relance_sent",
+      to,
+      subject,
+      {
+        quoteId: quote.id,
+        messageId: info.messageId,
+        response: info.response,
+      }
+    );
+
+    logger.info("Relance de devis envoyee par email avec succes", {
+      quoteId: quote.id,
+      to,
+      messageId: info.messageId,
+    });
+  } catch (error) {
+    logEmail(
+      "quote_relance_error",
+      to,
+      subject,
+      { 
+        quoteId: quote.id,
+        error: error instanceof Error ? error.message : "Unknown error" 
+      }
+    );
+
+    logger.error("Erreur lors de l envoi de la relance par email:", error);
+    throw error;
+  }
+};
+
+
+export default {
+  sendQuoteEmail,
+  sendQuoteRelanceEmail,
+  testEmailConfiguration,
+  sendTestEmail,
+  sendTrackedEmail,
+};

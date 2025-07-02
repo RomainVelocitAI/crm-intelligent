@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Metrics API</title>
+</head>
+<body>
+    <h1>Test Metrics API</h1>
+    <button onclick="testLogin()">Test Login</button>
+    <button onclick="testMetrics()">Test Metrics</button>
+    <div id="result"></div>
+
+    <script>
+        let token = null;
+
+        async function testLogin() {
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@velocitalead.fr',
+                        password: 'Demo123!'
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('Login response:', data);
+                
+                if (data.success) {
+                    token = data.data.accessToken;
+                    document.getElementById('result').innerHTML = '<p style="color: green;">Login successful! Token: ' + token.substring(0, 20) + '...</p>';
+                } else {
+                    document.getElementById('result').innerHTML = '<p style="color: red;">Login failed: ' + data.message + '</p>';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                document.getElementById('result').innerHTML = '<p style="color: red;">Login error: ' + error.message + '</p>';
+            }
+        }
+
+        async function testMetrics() {
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">Please login first</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/metrics/dashboard', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('Metrics response:', data);
+                
+                if (data.success) {
+                    document.getElementById('result').innerHTML = '<p style="color: green;">Metrics successful!</p><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } else {
+                    document.getElementById('result').innerHTML = '<p style="color: red;">Metrics failed: ' + data.message + '</p>';
+                }
+            } catch (error) {
+                console.error('Metrics error:', error);
+                document.getElementById('result').innerHTML = '<p style="color: red;">Metrics error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

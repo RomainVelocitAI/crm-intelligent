@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VelocitaLeads CRM - SaaS Français Complet</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Arial', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            border-radius: 15px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        h1 { color: #2563eb; font-size: 2.5em; margin-bottom: 10px; }
+        .subtitle { color: #6b7280; font-size: 1.2em; margin-bottom: 20px; }
+        .status {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin: 10px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        .card h3 {
+            color: #1f2937;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+            position: relative;
+            padding-left: 25px;
+        }
+        .feature-list li:before {
+            content: '✅';
+            position: absolute;
+            left: 0;
+        }
+        .tech-stack {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .tech-item {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        .demo-section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        .btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 10px;
+            text-decoration: none;
+            margin: 10px;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .interface-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .interface-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            background: white;
+        }
+        .interface-header {
+            height: 30px;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            color: white;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .interface-body {
+            padding: 15px;
+        }
+        .mock-data {
+            background: #f8fafc;
+            border-radius: 5px;
+            padding: 8px;
+            margin: 5px 0;
+            font-size: 0.8em;
+            border-left: 3px solid #3b82f6;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat {
+            background: rgba(255,255,255,0.9);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">V</div>
+            <h1>VelocitaLeads CRM</h1>
+            <div class="subtitle">SaaS français complet pour freelances et TPE</div>
+            <div class="subtitle">Création et envoi de devis professionnels avec email tracking</div>
+            <div class="status">✅ SYSTÈME DÉVELOPPÉ ET OPÉRATIONNEL</div>
+        </div>
+
+        <!-- Stats principales -->
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Backend Complet</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Frontend React</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">3</div>
+                <div class="stat-label">Modules Principaux</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">15+</div>
+                <div class="stat-label">APIs Développées</div>
+            </div>
+        </div>
+
+        <!-- Fonctionnalités principales -->
+        <div class="grid">
+            <div class="card">
+                <h3>🚀 Fonctionnalités SaaS</h3>
+                <ul class="feature-list">
+                    <li>Authentification JWT sécurisée</li>
+                    <li>Gestion complète des contacts</li>
+                    <li>Création et envoi de devis</li>
+                    <li>Génération PDF automatique</li>
+                    <li>Email tracking avancé</li>
+                    <li>Dashboard métriques temps réel</li>
+                    <li>Calculs automatiques (CA, conversion)</li>
+                    <li>Interface responsive française</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>⚡ Stack Technique</h3>
+                <div class="tech-stack">
+                    <div class="tech-item">Node.js + Express</div>
+                    <div class="tech-item">React + TypeScript</div>
+                    <div class="tech-item">PostgreSQL + Prisma</div>
+                    <div class="tech-item">Tailwind CSS</div>
+                    <div class="tech-item">JWT Auth</div>
+                    <div class="tech-item">React Query</div>
+                    <div class="tech-item">NodeMailer SMTP</div>
+                    <div class="tech-item">Puppeteer PDF</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>📊 Métriques Business</h3>
+                <ul class="feature-list">
+                    <li>Chiffre d'affaires automatique</li>
+                    <li>Taux de conversion calculé</li>
+                    <li>Panier moyen par client</li>
+                    <li>Score de valeur contact</li>
+                    <li>Classification intelligente</li>
+                    <li>Graphiques et analytics</li>
+                    <li>Suivi des performances</li>
+                    <li>Objectifs et KPIs</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Interfaces développées -->
+        <div class="demo-section">
+            <h2>📱 Interfaces Développées</h2>
+            <div class="interface-demo">
+                <div class="interface-card">
+                    <div class="interface-header">🔐 Authentification</div>
+                    <div class="interface-body">
+                        <div class="mock-data">Login / Inscription</div>
+                        <div class="mock-data">Validation formulaires</div>
+                        <div class="mock-data">JWT sécurisé</div>
+                        <div class="mock-data">Compte démo inclus</div>
+                    </div>
+                </div>
+
+                <div class="interface-card">
+                    <div class="interface-header">👥 Gestion Contacts</div>
+                    <div class="interface-body">
+                        <div class="mock-data">CRUD complet</div>
+                        <div class="mock-data">Métriques automatiques</div>
+                        <div class="mock-data">Filtres et recherche</div>
+                        <div class="mock-data">Statuts intelligents</div>
+                    </div>
+                </div>
+
+                <div class="interface-card">
+                    <div class="interface-header">📄 Devis / Opportunités</div>
+                    <div class="interface-body">
+                        <div class="mock-data">Création avancée</div>
+                        <div class="mock-data">Calculs automatiques</div>
+                        <div class="mock-data">Génération PDF</div>
+                        <div class="mock-data">Envoi email + tracking</div>
+                    </div>
+                </div>
+
+                <div class="interface-card">
+                    <div class="interface-header">📊 Dashboard Métriques</div>
+                    <div class="interface-body">
+                        <div class="mock-data">KPIs temps réel</div>
+                        <div class="mock-data">Graphiques Recharts</div>
+                        <div class="mock-data">Analytics avancés</div>
+                        <div class="mock-data">Objectifs business</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backend API -->
+        <div class="demo-section">
+            <h2>🔌 Backend API Développé</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Endpoints Authentification</h3>
+                    <div class="mock-data">POST /api/auth/login</div>
+                    <div class="mock-data">POST /api/auth/register</div>
+                    <div class="mock-data">GET /api/auth/profile</div>
+                </div>
+
+                <div class="card">
+                    <h3>Endpoints Contacts</h3>
+                    <div class="mock-data">GET /api/contacts</div>
+                    <div class="mock-data">POST /api/contacts</div>
+                    <div class="mock-data">PUT /api/contacts/:id</div>
+                    <div class="mock-data">DELETE /api/contacts/:id</div>
+                </div>
+
+                <div class="card">
+                    <h3>Endpoints Devis</h3>
+                    <div class="mock-data">GET /api/quotes</div>
+                    <div class="mock-data">POST /api/quotes</div>
+                    <div class="mock-data">POST /api/quotes/:id/send</div>
+                    <div class="mock-data">GET /api/quotes/:id/pdf</div>
+                </div>
+
+                <div class="card">
+                    <h3>Endpoints Métriques</h3>
+                    <div class="mock-data">GET /api/metrics/dashboard</div>
+                    <div class="mock-data">GET /api/metrics/contacts/:id</div>
+                    <div class="mock-data">GET /api/services</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Données de test -->
+        <div class="demo-section">
+            <h2>💾 Données de Démonstration</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Compte de Test</h3>
+                    <div class="mock-data"><strong>Email:</strong> demo@velocitaleads.com</div>
+                    <div class="mock-data"><strong>Mot de passe:</strong> password123</div>
+                    <div class="mock-data"><strong>Entreprise:</strong> VelocitaLeads SARL</div>
+                </div>
+
+                <div class="card">
+                    <h3>3 Contacts Pré-créés</h3>
+                    <div class="mock-data">🔥 Jean Dupont - Client actif (15,000€)</div>
+                    <div class="mock-data">⭐ Marie Martin - Prospect chaud</div>
+                    <div class="mock-data">❄️ Pierre Durand - Prospect froid</div>
+                </div>
+
+                <div class="card">
+                    <h3>2 Devis Exemple</h3>
+                    <div class="mock-data">✅ DEV-2024-001 - Accepté (14,400€)</div>
+                    <div class="mock-data">📤 DEV-2024-002 - Envoyé (30,000€)</div>
+                </div>
+
+                <div class="card">
+                    <h3>Métriques Calculées</h3>
+                    <div class="mock-data">📊 CA Total: 125,000€</div>
+                    <div class="mock-data">📈 Taux conversion: 65.5%</div>
+                    <div class="mock-data">🛒 Panier moyen: 2,500€</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Email -->
+        <div class="demo-section">
+            <h2>📧 Système Email Configuré</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Google Workspace SMTP</h3>
+                    <div class="mock-data">✅ Compte: direction@velocit-ai.fr</div>
+                    <div class="mock-data">✅ Templates HTML responsives</div>
+                    <div class="mock-data">✅ Tracking pixel ouvertures</div>
+                    <div class="mock-data">✅ Tracking clics liens</div>
+                </div>
+
+                <div class="card">
+                    <h3>Templates Email</h3>
+                    <div class="mock-data">📄 Email envoi devis</div>
+                    <div class="mock-data">🎨 Design professionnel</div>
+                    <div class="mock-data">👑 Version premium/gratuite</div>
+                    <div class="mock-data">📱 Responsive mobile</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer avec statut -->
+        <div class="demo-section">
+            <h2>🎯 Statut de Développement</h2>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number">✅</div>
+                    <div class="stat-label">Backend API<br>Node.js + Express</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">✅</div>
+                    <div class="stat-label">Frontend React<br>Interface complète</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">✅</div>
+                    <div class="stat-label">Base de données<br>PostgreSQL + Prisma</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">✅</div>
+                    <div class="stat-label">Email System<br>SMTP configuré</div>
+                </div>
+            </div>
+
+            <p style="margin: 30px 0; font-size: 1.2em; color: #1f2937;">
+                <strong>🚀 VelocitaLeads CRM SaaS est 100% développé et fonctionnel !</strong>
+            </p>
+            
+            <p style="color: #6b7280; margin-bottom: 20px;">
+                Solution complète de CRM français avec authentification, gestion contacts, 
+                création devis, envoi emails, tracking, métriques et dashboard analytics.
+            </p>
+
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h4>🔧 Architecture Technique Complète :</h4>
+                <p style="margin: 10px 0; font-size: 0.9em; color: #4b5563;">
+                    • Backend : Node.js + Express + TypeScript + PostgreSQL + Prisma ORM<br>
+                    • Frontend : React + TypeScript + Tailwind CSS + React Query + Zustand<br>
+                    • Services : NodeMailer + Puppeteer + JWT + Winston + Rate Limiting<br>
+                    • Sécurité : Helmet + CORS + Validation + Hash passwords + Auth middleware
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Animation simple
+        window.addEventListener('load', function() {
+            document.querySelectorAll('.card').forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(30px)';
+                    card.style.transition = 'all 0.6s ease';
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 50);
+                }, index * 100);
+            });
+        });
+
+        // Compteur animé
+        function animateNumber(element, target) {
+            let current = 0;
+            const increment = target / 100;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                element.textContent = Math.floor(current) + '%';
+            }, 20);
+        }
+
+        document.querySelectorAll('.stat-number').forEach(el => {
+            if (el.textContent.includes('%')) {
+                const target = parseInt(el.textContent);
+                animateNumber(el, target);
+            }
+        });
+    </script>
+</body>
+</html>

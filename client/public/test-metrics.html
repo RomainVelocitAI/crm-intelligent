@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Metrics Simple</title>
+</head>
+<body>
+    <div id="result">Testing API...</div>
+    
+    <script>
+        console.log('Starting API test...');
+        
+        // Try to login first
+        fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: 'admin@velocitalead.fr',
+                password: 'Demo123!'
+            })
+        })
+        .then(response => response.json())
+        .then(loginData => {
+            console.log('Login result:', loginData);
+            
+            if (loginData.success) {
+                const token = loginData.data.accessToken;
+                console.log('Got token:', token.substring(0, 20) + '...');
+                
+                // Store token like the app does
+                localStorage.setItem('auth-token', token);
+                
+                // Now test metrics call
+                return fetch('/api/metrics/dashboard', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+            } else {
+                throw new Error('Login failed: ' + loginData.message);
+            }
+        })
+        .then(response => response.json())
+        .then(metricsData => {
+            console.log('Metrics result:', metricsData);
+            document.getElementById('result').innerHTML = '<h1>API Test Successful!</h1><pre>' + JSON.stringify(metricsData, null, 2) + '</pre>';
+        })
+        .catch(error => {
+            console.error('Test failed:', error);
+            document.getElementById('result').innerHTML = '<h1>Test Failed</h1><p>' + error.message + '</p>';
+        });
+    </script>
+</body>
+</html>

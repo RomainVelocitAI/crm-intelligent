@@ -1,0 +1,225 @@
+import axios from 'axios';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+// Configuration axios
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Intercepteur pour ajouter le token d'authentification
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Intercepteur pour gérer les erreurs de réponse
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Services d'authentification
+export const authService = {
+  login: async (email, password) => {
+    const response = await api.post('/auth/login', { email, password });
+    if (response.data.success) {
+      localStorage.setItem('authToken', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    return response.data;
+  },
+
+  register: async (userData) => {
+    const response = await api.post('/auth/register', userData);
+    if (response.data.success) {
+      localStorage.setItem('authToken', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    return response.data;
+  },
+
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+    } finally {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+    }
+  },
+
+  verifyToken: async () => {
+    const response = await api.get('/auth/verify');
+    return response.data;
+  },
+
+  getCurrentUser: () => {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  },
+
+  isAuthenticated: () => {
+    return !!localStorage.getItem('authToken');
+  }
+};
+
+// Services pour les leads
+export const leadsService = {
+  getAll: async (filters = {}) => {
+    const params = new URLSearchParams(filters).toString();
+    const response = await api.get(`/leads?${params}`);
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await api.get(`/leads/${id}`);
+    return response.data;
+  },
+
+  create: async (leadData) => {
+    const response = await api.post('/leads', leadData);
+    return response.data;
+  },
+
+  update: async (id, updates) => {
+    const response = await api.put(`/leads/${id}`, updates);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/leads/${id}`);
+    return response.data;
+  },
+
+  import: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/leads/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+
+  getStats: async () => {
+    const response = await api.get('/leads/stats/overview');
+    return response.data;
+  }
+};
+
+// Services pour l'IA
+export const aiService = {
+  getConversation: async (leadId) => {
+    const response = await api.get(`/ai/conversation/${leadId}`);
+    return response.data;
+  },
+
+  sendMessage: async (leadId, message) => {
+    const response = await api.post(`/ai/chat/${leadId}`, { message });
+    return response.data;
+  },
+
+  initConversation: async (leadId) => {
+    const response = await api.post(`/ai/init/${leadId}`);
+    return response.data;
+  },
+
+  resetConversation: async (leadId) => {
+    const response = await api.delete(`/ai/conversation/${leadId}`);
+    return response.data;
+  },
+
+  getQualification: async (leadId) => {
+    const response = await api.get(`/ai/qualification/${leadId}`);
+    return response.data;
+  }
+};
+
+// Services pour les devis
+export const quotesService = {
+  getByLead: async (leadId) => {
+    const response = await api.get(`/quotes/lead/${leadId}`);
+    return response.data;
+  },
+
+  generate: async (leadId, template = 'standard') => {
+    const response = await api.post(`/quotes/generate/${leadId}`, { template });
+    return response.data;
+  },
+
+  send: async (quoteId, customMessage = '') => {
+    const response = await api.post(`/quotes/send/${quoteId}`, { customMessage });
+    return response.data;
+  },
+
+  duplicate: async (quoteId) => {
+    const response = await api.post(`/quotes/duplicate/${quoteId}`);
+    return response.data;
+  },
+
+  trackRead: async (quoteId) => {
+    const response = await api.post(`/quotes/track/${quoteId}/read`);
+    return response.data;
+  },
+
+  getStats: async () => {
+    const response = await api.get('/quotes/stats/overview');
+    return response.data;
+  }
+};
+
+// Services pour les emails
+export const emailService = {
+  getTemplates: async () => {
+    const response = await api.get('/email/templates');
+    return response.data;
+  },
+
+  personalizeTemplate: async (template, variables) => {
+    const response = await api.post('/email/templates/personalize', { template, variables });
+    return response.data;
+  },
+
+  sendTest: async (to, subject, content) => {
+    const response = await api.post('/email/test', { to, subject, content });
+    return response.data;
+  },
+
+  getStats: async (emailId) => {
+    const response = await api.get(`/email/stats/${emailId}`);
+    return response.data;
+  },
+
+  getConfig: async () => {
+    const response = await api.get('/email/config');
+    return response.data;
+  }
+};
+
+// Service de santé de l'API
+export const healthService = {
+  check: async () => {
+    const response = await api.get('/health');
+    return response.data;
+  }
+};
+
+export default api;

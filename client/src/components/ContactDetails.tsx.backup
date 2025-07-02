@@ -1,0 +1,836 @@
+import { useState, useEffect } from 'react';
+import { 
+  TrendingUp, FileText, Mail, Edit2, Send, CheckCircle, XCircle, 
+  Eye as EyeIcon, X
+} from 'lucide-react';
+import { useQuotes } from '@/hooks/useQuotes';
+import { contactsService, quotesService } from '@/services/api';
+import { Contact, QuoteStatus, GenericEmail } from '@/types';
+import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
+
+interface ContactDetailsProps {
+  contact: Contact;
+}
+
+export default function ContactDetails({ contact }: ContactDetailsProps) {
+  const { quotes } = useQuotes();
+  const queryClient = useQueryClient();
+  const [contactEmails, setContactEmails] = useState<GenericEmail[]>([]);
+  const [isLoadingEmails, setIsLoadingEmails] = useState(false);
+  
+  // Etats pour la modal de relance
+  const [showRelanceModal, setShowRelanceModal] = useState(false);
+  const [selectedQuote, setSelectedQuote] = useState<any>(null);
+  const [relanceSubject, setRelanceSubject] = useState('');
+  const [relanceContent, setRelanceContent] = useState('');
+  const [isLoadingRelance, setIsLoadingRelance] = useState(false);
+  
+  // Etats pour les actions sur les devis
+  const [isUpdatingQuote, setIsUpdatingQuote] = useState<string | null>(null);
+  
+  // Etats pour la modal de devis
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [selectedQuoteForModal, setSelectedQuoteForModal] = useState<any>(null);
+
+  // Recuperer les emails du contact
+  useEffect(() => {
+    const fetchEmails = async () => {
+      setIsLoadingEmails(true);
+      try {
+        const response = await contactsService.getContactEmails(contact.id);
+        setContactEmails(response.data?.emails || []);
+      } catch (error) {
+        console.error('Erreur recuperation emails:', error);
+      } finally {
+        setIsLoadingEmails(false);
+      }
+    };
+
+    fetchEmails();
+  }, [contact.id]);
+
+  // Filtrer les devis du contact
+  const contactQuotes = quotes?.filter(quote => quote.contactId === contact.id) || [];
+
+  // Fonction pour calculer les jours depuis creation
+  const getDaysSinceCreation = (date: string) => {
+    const now = new Date();
+    const created = new Date(date);
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Fonction pour obtenir une date relative
+  const getRelativeDate = (date: string) => {
+    const now = new Date();
+    const targetDate = new Date(date);
+    const diffTime = now.getTime() - targetDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return "Aujourd'hui";
+    if (diffDays === 1) return "Hier";
+    if (diffDays < 7) return `Il y a ${diffDays} jours`;
+    if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} semaine${Math.floor(diffDays / 7) > 1 ? 's' : ''}`;
+    if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
+    return `Il y a ${Math.floor(diffDays / 365)} an${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
+  };
+
+  // Fonction pour obtenir la couleur du bouton de relance
+  const getRelanceButtonColor = (days: number) => {
+    if (days < 3) return 'border-blue-500 text-blue-600 hover:bg-blue-50';
+    if (days <= 6) return 'border-orange-500 text-orange-600 hover:bg-orange-50';
+    return 'border-red-500 text-red-600 hover:bg-red-50';
+  };
+
+  // Fonction pour obtenir l'urgence
+  const getUrgenceLabel = (days: number) => {
+    if (days < 3) return { label: 'Recent', color: 'text-blue-600' };
+    if (days <= 6) return { label: 'A suivre', color: 'text-orange-600' };
+    return { label: 'Relance recommandee', color: 'text-red-600' };
+  };
+
+  // Fonction pour preparer la relance (ouvre la modal)
+  const handlePrepareRelance = (quote: any) => {
+    const daysSince = getDaysSinceCreation(quote.dateCreation);
+    let urgenceText = '';
+    
+    if (daysSince < 3) {
+      urgenceText = 'Nous esperons que notre proposition vous interesse.';
+    } else if (daysSince <= 6) {
+      urgenceText = 'Nous souhaiterions connaitre votre avis sur notre proposition.';
+    } else {
+      urgenceText = 'Nous aimerions savoir si vous avez eu l\'occasion d\'examiner notre devis.';
+    }
+
+    const subject = `Relance - ${quote.objet}`;
+    const content = `Bonjour ${contact.prenom} ${contact.nom},
+
+${urgenceText}
+
+Voici un rappel concernant le devis "${quote.objet}" (numero ${quote.numero}) d'un montant de ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(quote.total)}.
+
+Ce devis a ete envoye il y a ${daysSince} jour${daysSince > 1 ? 's' : ''}.
+
+N'hesitez pas a nous contacter si vous avez des questions ou si vous souhaitez discuter de modifications.
+
+Nous restons a votre disposition pour tout renseignement complementaire.
+
+Cordialement,
+L'equipe VelociTaLeads`;
+
+    setSelectedQuote(quote);
+    setRelanceSubject(subject);
+    setRelanceContent(content);
+    setShowRelanceModal(true);
+  };
+
+  // Fonction pour envoyer la relance
+  const handleSendRelance = async () => {
+    if (!selectedQuote || !relanceSubject || !relanceContent) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
+    setIsLoadingRelance(true);
+    
+    try {
+      // Envoyer l'email de relance avec tracking
+      await contactsService.sendEmailToContact(
+        contact.id,
+        relanceSubject,
+        relanceContent
+      );
+
+      toast.success(`Relance envoyee avec succes pour le devis "${selectedQuote.objet}"`);
+      
+      // Fermer la modal
+      setShowRelanceModal(false);
+      setSelectedQuote(null);
+      setRelanceSubject('');
+      setRelanceContent('');
+      
+      // Recharger les emails pour afficher la nouvelle relance
+      const response = await contactsService.getContactEmails(contact.id);
+      setContactEmails(response.data?.emails || []);
+      
+    } catch (error) {
+      console.error('Erreur envoi relance:', error);
+      toast.error('Erreur lors de l\'envoi de la relance');
+    } finally {
+      setIsLoadingRelance(false);
+    }
+  };
+
+  // Fonction pour ouvrir la modal de devis
+  const handleQuoteClick = (quote: any) => {
+    setSelectedQuoteForModal(quote);
+    setShowQuoteModal(true);
+  };
+
+  // Fonction pour accepter un devis
+  const handleAcceptQuote = async (quote: any) => {
+    setIsUpdatingQuote(quote.id);
+    
+    try {
+      // Mettre a jour le statut du devis
+      await quotesService.updateQuote(quote.id, {
+        ...quote,
+        statut: QuoteStatus.ACCEPTE,
+        dateAcceptation: new Date().toISOString(),
+      });
+
+      // Mettre a jour les metriques du contact
+      await contactsService.updateContactMetrics(contact.id);
+
+      toast.success(`Devis "${quote.objet}" accepte avec succes !`);
+      
+      // Recharger les donnees
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      
+    } catch (error) {
+      console.error('Erreur acceptation devis:', error);
+      toast.error('Erreur lors de l\'acceptation du devis');
+    } finally {
+      setIsUpdatingQuote(null);
+    }
+  };
+
+  // Fonction pour refuser un devis
+  const handleRefuseQuote = async (quote: any) => {
+    setIsUpdatingQuote(quote.id);
+    
+    try {
+      // Mettre a jour le statut du devis
+      await quotesService.updateQuote(quote.id, {
+        ...quote,
+        statut: QuoteStatus.REFUSE,
+      });
+
+      // Mettre a jour les metriques du contact
+      await contactsService.updateContactMetrics(contact.id);
+
+      toast.success(`Devis "${quote.objet}" refuse.`);
+      
+      // Recharger les donnees
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      
+    } catch (error) {
+      console.error('Erreur refus devis:', error);
+      toast.error('Erreur lors du refus du devis');
+    } finally {
+      setIsUpdatingQuote(null);
+    }
+  };
+
+  // Fonction pour obtenir la couleur du statut de devis
+  const getQuoteStatusColor = (status: QuoteStatus) => {
+    switch (status) {
+      case QuoteStatus.BROUILLON: return 'bg-gray-100 text-gray-800';
+      case QuoteStatus.ENVOYE: return 'bg-blue-100 text-blue-800';
+      case QuoteStatus.VU: return 'bg-yellow-100 text-yellow-800';
+      case QuoteStatus.ACCEPTE: return 'bg-green-100 text-green-800';
+      case QuoteStatus.REFUSE: return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Metriques principales */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-blue-700">Score de valeur</p>
+              <p className="text-2xl font-bold text-blue-900">
+                {Math.round(contact.scoreValeur || 0)}/100
+              </p>
+            </div>
+            <TrendingUp className="w-8 h-8 text-blue-600" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-green-700">CA total</p>
+              <p className="text-2xl font-bold text-green-900">
+                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(contact.chiffresAffairesTotal || 0)}
+              </p>
+            </div>
+            <TrendingUp className="w-8 h-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-purple-700">Taux conversion</p>
+              <p className="text-2xl font-bold text-purple-900">
+                {Math.round(contact.tauxConversion || 0)}%
+              </p>
+            </div>
+            <TrendingUp className="w-8 h-8 text-purple-600" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-orange-700">Panier moyen</p>
+              <p className="text-2xl font-bold text-orange-900">
+                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(contact.panierMoyen || 0)}
+              </p>
+            </div>
+            <TrendingUp className="w-8 h-8 text-orange-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Section Historique */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-blue-600" />
+            Historique ({contactQuotes.length + contactEmails.length})
+          </h3>
+          <div className="flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-blue-100 border border-blue-200 rounded"></div>
+              <span>Devis</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
+              <span>Emails</span>
+            </div>
+          </div>
+        </div>
+
+        {isLoadingEmails ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Chargement de l'historique...</p>
+          </div>
+        ) : contactQuotes.length === 0 && contactEmails.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">Aucun historique pour ce contact</p>
+        ) : (
+          <div className="relative max-h-96 overflow-y-auto">
+            {/* Timeline combinée */}
+            <div className="relative">
+              {/* Ligne de timeline */}
+              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+              
+              <div className="space-y-6">
+                {[
+              ...contactQuotes.map(quote => ({
+                type: 'quote',
+                date: quote.dateCreation,
+                data: quote
+              })),
+              ...contactEmails.map(email => ({
+                type: 'email',
+                date: email.sentAt,
+                data: email
+              }))
+            ]
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .map((item, index) => {
+              if (item.type === 'quote') {
+                const quote = item.data;
+              const daysSince = getDaysSinceCreation(quote.dateCreation);
+              const urgence = getUrgenceLabel(daysSince);
+              const canRelance = quote.statut === QuoteStatus.ENVOYE || quote.statut === QuoteStatus.VU;
+              const isUpdating = isUpdatingQuote === quote.id;
+
+              return (
+                <div className="relative flex items-start">
+                  {/* Indicateur timeline */}
+                  <div className="flex flex-col items-center">
+                    <div className="relative z-10 flex items-center justify-center w-12 h-12 bg-blue-500 rounded-full border-4 border-white shadow-lg">
+                      <FileText className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-xs text-gray-500 mt-2 text-center whitespace-nowrap">
+                      {getRelativeDate(quote.dateCreation)}
+                    </span>
+                  </div>
+                  
+                  {/* Contenu */}
+                  <div 
+                    key={`quote-${quote.id}`} 
+                    className="ml-4 flex-1 border border-blue-200 rounded-lg p-4 hover:shadow-md hover:border-blue-400 transition-all cursor-pointer bg-blue-50"
+                    onClick={() => handleQuoteClick(quote)}
+                    title="Cliquer pour voir le détail du devis"
+                  >
+                    {/* Badge type */}
+                    <div className="absolute top-2 right-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Devis #{quote.numero}
+                      </span>
+                    </div>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900">{quote.objet}</h4>
+                      <p className="text-sm text-gray-600">#{quote.numero}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">
+                        {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(quote.total)}
+                      </p>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getQuoteStatusColor(quote.statut)}`}>
+                        {quote.statut}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                    <div>
+                      <p className="text-xs text-gray-500">Date creation</p>
+                      <p className="text-sm font-medium">{new Date(quote.dateCreation).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Jours ecoules</p>
+                      <p className="text-sm font-medium">{daysSince} jour{daysSince > 1 ? 's' : ''}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Urgence</p>
+                      <p className={`text-sm font-medium ${urgence.color}`}>{urgence.label}</p>
+                    </div>
+                  </div>
+
+                  {/* Jauge de progression pour devis ENVOYE */}
+                  {quote.statut === QuoteStatus.ENVOYE && (
+                    <div className="mb-3">
+                      <div className="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>Progression relance</span>
+                        <span>{Math.min(daysSince, 6)}/6 jours</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            daysSince < 3 ? 'bg-blue-500' : 
+                            daysSince <= 6 ? 'bg-orange-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${Math.min((daysSince / 6) * 100, 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tracking et actions */}
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Send className="w-4 h-4 text-blue-500" />
+                        <span className="text-gray-600">Envoye</span>
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      </div>
+                      {quote.statut === QuoteStatus.VU ? (
+                        <div className="flex items-center gap-1">
+                          <EyeIcon className="w-4 h-4 text-green-500" />
+                          <span className="text-gray-600">Ouvert</span>
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <EyeIcon className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-400">Non ouvert</span>
+                          <XCircle className="w-4 h-4 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {canRelance && (
+                        <button
+                          className={`px-3 py-1 border rounded-lg text-sm font-medium transition-colors ${getRelanceButtonColor(daysSince)}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePrepareRelance(quote);
+                          }}
+                          disabled={isUpdating}
+                        >
+                          <Send className="w-4 h-4 inline mr-1" />
+                          Relancer
+                        </button>
+                      )}
+                      
+                      {(quote.statut === QuoteStatus.ENVOYE || quote.statut === QuoteStatus.VU) && (
+                        <div className="flex gap-1">
+                          <button
+                            className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAcceptQuote(quote);
+                            }}
+                            disabled={isUpdating}
+                            title="Marquer ce devis comme accepté par le client"
+                          >
+                            {isUpdating ? (
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                            ) : (
+                              <CheckCircle className="w-4 h-4" />
+                            )}
+                            Accepté
+                          </button>
+                          <button
+                            className="px-3 py-1 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRefuseQuote(quote);
+                            }}
+                            disabled={isUpdating}
+                            title="Marquer ce devis comme refusé par le client"
+                          >
+                            {isUpdating ? (
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                            ) : (
+                              <XCircle className="w-4 h-4" />
+                            )}
+                            Refusé
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            } else {
+                // Email
+                const email = item.data;
+                return (
+                  <div className="relative flex items-start">
+                    {/* Indicateur timeline */}
+                    <div className="flex flex-col items-center">
+                      <div className="relative z-10 flex items-center justify-center w-12 h-12 bg-green-500 rounded-full border-4 border-white shadow-lg">
+                        <Mail className="w-5 h-5 text-white" />
+                      </div>
+                      <span className="text-xs text-gray-500 mt-2 text-center whitespace-nowrap">
+                        {getRelativeDate(email.sentAt)}
+                      </span>
+                    </div>
+                    
+                    {/* Contenu */}
+                    <div 
+                      key={`email-${email.id}`} 
+                      className="ml-4 flex-1 border border-green-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-green-50"
+                    >
+                      {/* Badge type */}
+                      <div className="absolute top-2 right-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Email
+                        </span>
+                      </div>
+                    
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1 pr-16">
+                        <h4 className="font-semibold text-gray-900">{email.subject}</h4>
+                        <p className="text-sm text-gray-600">
+                          Envoyé le {new Date(email.sentAt).toLocaleDateString('fr-FR')} à {new Date(email.sentAt).toLocaleTimeString('fr-FR')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center mb-3">
+                      <div className="flex items-center gap-2">
+                        {email.isOpened ? (
+                          <div className="flex items-center gap-1 text-green-600">
+                            <EyeIcon className="w-4 h-4" />
+                            <span className="text-sm font-medium">Ouvert {email.openCount} fois</span>
+                            <CheckCircle className="w-4 h-4" />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 text-gray-400">
+                            <EyeIcon className="w-4 h-4" />
+                            <span className="text-sm">Non ouvert</span>
+                            <XCircle className="w-4 h-4" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {email.openedAt && (
+                      <p className="text-xs text-gray-500 mb-2">
+                        Première ouverture: {new Date(email.openedAt).toLocaleDateString('fr-FR')} à {new Date(email.openedAt).toLocaleTimeString('fr-FR')}
+                      </p>
+                    )}
+
+                      <div className="bg-white p-3 rounded text-sm text-gray-700 border border-green-100">
+                        {email.content.substring(0, 200)}...
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+            })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modal de relance */}
+      {showRelanceModal && selectedQuote && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowRelanceModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                Relance pour le devis "{selectedQuote.objet}"
+              </h3>
+              <button
+                onClick={() => setShowRelanceModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Destinataire
+                </label>
+                <input
+                  type="email"
+                  value={contact.email}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sujet
+                </label>
+                <input
+                  type="text"
+                  value={relanceSubject}
+                  onChange={(e) => setRelanceSubject(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Message
+                </label>
+                <textarea
+                  value={relanceContent}
+                  onChange={(e) => setRelanceContent(e.target.value)}
+                  rows={12}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <EyeIcon className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm text-blue-700">Email avec tracking active</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowRelanceModal(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSendRelance}
+                disabled={isLoadingRelance || !relanceSubject || !relanceContent}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoadingRelance ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Envoi...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Envoyer la relance
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de détail du devis */}
+      {showQuoteModal && selectedQuoteForModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowQuoteModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* En-tête de la modal */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-bold">Devis #{selectedQuoteForModal.numero}</h2>
+                  <p className="text-blue-100">{selectedQuoteForModal.objet}</p>
+                  <div className="mt-2">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getQuoteStatusColor(selectedQuoteForModal.statut)} bg-opacity-90`}>
+                      {selectedQuoteForModal.statut}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowQuoteModal(false)}
+                  className="text-white hover:text-gray-200 p-2"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenu de la modal */}
+            <div className="p-6">
+              {/* Informations générales */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Informations générales</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-gray-500">Date de création</p>
+                      <p className="font-medium">{new Date(selectedQuoteForModal.dateCreation).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Date de validité</p>
+                      <p className="font-medium">{new Date(selectedQuoteForModal.dateValidite).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                    {selectedQuoteForModal.dateEnvoi && (
+                      <div>
+                        <p className="text-sm text-gray-500">Date d'envoi</p>
+                        <p className="font-medium">{new Date(selectedQuoteForModal.dateEnvoi).toLocaleDateString('fr-FR')}</p>
+                      </div>
+                    )}
+                    {selectedQuoteForModal.dateAcceptation && (
+                      <div>
+                        <p className="text-sm text-gray-500">Date d'acceptation</p>
+                        <p className="font-medium">{new Date(selectedQuoteForModal.dateAcceptation).toLocaleDateString('fr-FR')}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Montants</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-gray-500">Sous-total HT</p>
+                      <p className="font-medium">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(selectedQuoteForModal.sousTotal)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">TVA</p>
+                      <p className="font-medium">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(selectedQuoteForModal.tva)}</p>
+                    </div>
+                    <div className="border-t pt-2">
+                      <p className="text-sm text-gray-500">Total TTC</p>
+                      <p className="text-xl font-bold text-green-600">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(selectedQuoteForModal.total)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Éléments du devis */}
+              {selectedQuoteForModal.items && selectedQuoteForModal.items.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Éléments du devis</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border border-gray-200 rounded-lg">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Désignation</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Quantité</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Prix unitaire</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {selectedQuoteForModal.items.map((item: any, index: number) => (
+                          <tr key={index}>
+                            <td className="px-4 py-3">
+                              <div>
+                                <p className="font-medium text-gray-900">{item.designation}</p>
+                                {item.description && (
+                                  <p className="text-sm text-gray-500">{item.description}</p>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-gray-900">{item.quantite}</td>
+                            <td className="px-4 py-3 text-gray-900">
+                              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(item.prixUnitaire)}
+                            </td>
+                            <td className="px-4 py-3 font-medium text-gray-900">
+                              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(item.total)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Conditions et notes */}
+              {(selectedQuoteForModal.conditions || selectedQuoteForModal.notes) && (
+                <div className="space-y-4">
+                  {selectedQuoteForModal.conditions && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Conditions</h3>
+                      <p className="text-gray-700 whitespace-pre-wrap">{selectedQuoteForModal.conditions}</p>
+                    </div>
+                  )}
+                  {selectedQuoteForModal.notes && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Notes</h3>
+                      <p className="text-gray-700 whitespace-pre-wrap">{selectedQuoteForModal.notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="border-t border-gray-200 p-4 bg-gray-50 rounded-b-lg">
+              <div className="flex justify-center gap-4">
+                <button
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2"
+                  onClick={() => setShowQuoteModal(false)}
+                >
+                  Fermer
+                </button>
+                
+                <button
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  onClick={() => {
+                    setShowQuoteModal(false);
+                    window.open(`/opportunites?edit=${selectedQuoteForModal.id}`, '_blank');
+                  }}
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Modifier dans Opportunités
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  velocitalead-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: velocitalead-dev
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/velocitaleads_dev
+      - JWT_SECRET=velocitaleads-dev-secret-2024
+      - FRONTEND_URL=https://dev.crm.velocit-ai.fr
+      - TRACKING_BASE_URL=https://dev.crm.velocit-ai.fr
+      - PORT=3001
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.velocitalead-dev.rule=Host(`dev.velocitalead.velocit-ai.fr`)"
+      - "traefik.http.routers.velocitalead-dev.tls=true"
+      - "traefik.http.routers.velocitalead-dev.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.velocitalead-dev.loadbalancer.server.port=80"
+    networks:
+      - web
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./.env.dev:/app/.env
+
+
+networks:
+  web:
+    external: true
