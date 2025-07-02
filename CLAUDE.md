@@ -96,9 +96,10 @@ npm run preview         # Previsualiser la version de production
 
 ### Generation de Devis
 - Creation de devis avec calcul automatique des totaux
-- Generation de PDF professionnels
+- Generation de PDF professionnels avec pagination intelligente
 - Envoi par email avec suivi
 - Gestion du cycle de vie des devis (brouillon, envoye, vu, accepte, refuse)
+- **NOUVEAU**: Systeme de pagination avance qui evite la coupure des elements
 
 ### Suivi d'Emails
 - Pixel de suivi pour detecter les ouvertures
@@ -154,9 +155,33 @@ Le schema Prisma definit les modeles suivants :
 - Rate limiting
 - Sanitisation des donnees
 
+## Generation PDF Avancee
+
+### Systeme de Pagination Intelligent
+Le service PDF utilise PDFKit avec un systeme de pagination avance qui garantit :
+- **Aucune coupure d'elements** : Les lignes de devis restent toujours entieres
+- **Gestion automatique des sauts de page** : Detection intelligente de l'espace disponible
+- **En-tetes de tableau** : Redessines automatiquement sur chaque nouvelle page
+- **Hauteur fixe des lignes** : 50 points par ligne pour eviter les coupures
+- **Marge de securite** : 100 points en bas de page
+
+### Fonctionnalites PDF
+- **Template basique** : PDFKit pour performance optimale (5-10 KB)
+- **Template premium** : Puppeteer pour design avance (200-400 KB)
+- **Protection des documents** : Lecture seule, mots de passe optionnels
+- **Customisation** : Couleurs, polices, logos personnalisables
+- **Metadata** : Informations document automatiques
+
+### Tests de Pagination
+Utiliser `test-devis-pagination.js` pour tester avec de nombreux elements :
+```bash
+node test-devis-pagination.js
+```
+
 ## Bonnes Pratiques de Developpement
 - Utiliser les types TypeScript
 - Suivre le modele MVC
 - Utiliser les services pour la logique metier
 - Documenter les fonctions et API
 - Ecrire des tests pour les fonctionnalites critiques
+- **Tester la pagination PDF** avec des devis longs avant deploiement

@@ -520,7 +520,7 @@ const generateQuotePDFTemplate = (quote: QuoteData): string => {
   `;
 };
 
-// Fonction pour générer un PDF avec PDFKit (template de base)
+// Fonction pour générer un PDF avec PDFKit (template de base avec pagination)
 const generateBasicQuotePDF = async (quote: QuoteData, options: PDFGenerationOptions): Promise<string> => {
   try {
     logPdf('pdf_generation_start_basic', quote.id, { numero: quote.numero });
@@ -559,215 +559,284 @@ const generateBasicQuotePDF = async (quote: QuoteData, options: PDFGenerationOpt
       secondary: '#6c757d'
     };
 
-    // En-tête avec informations de l'entreprise
-    doc.fontSize(24)
-       .fillColor(colors.primary)
-       .text('DEVIS', 50, 50, { align: 'center' });
+    // Variables pour la gestion de la pagination
+    const pageHeight = 792; // Hauteur page A4 en points
+    const marginBottom = 100; // Marge du bas pour éviter de couper
+    let currentY = 50;
 
-    doc.fontSize(16)
-       .fillColor('#000000')
-       .text(`N° ${quote.numero}`, 50, 80, { align: 'center' });
-
-    // Informations de l'entreprise (émetteur)
-    let yPosition = 120;
-    doc.fontSize(14)
-       .fillColor(colors.primary)
-       .text('ÉMETTEUR', 50, yPosition);
-
-    yPosition += 25;
-    doc.fontSize(11)
-       .fillColor('#000000')
-       .text(`${quote.user.prenom} ${quote.user.nom}`, 50, yPosition);
-
-    if (quote.user.entreprise) {
-      yPosition += 15;
-      doc.text(quote.user.entreprise, 50, yPosition);
+    // Fonction pour vérifier si on a assez de place
+    function checkPageBreak(neededHeight: number): boolean {
+      if (currentY + neededHeight > pageHeight - marginBottom) {
+        doc.addPage();
+        currentY = 50;
+        logger.info(`PDF: Nouvelle page ajoutée à Y=${currentY}`);
+        return true;
+      }
+      return false;
     }
 
+    // === EN-TÊTE ===
+    doc.fontSize(28)
+       .fillColor(colors.primary)
+       .text('DEVIS', 50, currentY, { align: 'center' });
+    currentY += 40;
+
+    doc.fontSize(18)
+       .fillColor('#000000')
+       .text(`N° ${quote.numero}`, 50, currentY, { align: 'center' });
+    currentY += 30;
+
+    // Ligne de séparation
+    doc.moveTo(50, currentY)
+       .lineTo(545, currentY)
+       .strokeColor(colors.primary)
+       .lineWidth(2)
+       .stroke();
+    currentY += 20;
+
+    // === INFORMATIONS ENTREPRISE ET CLIENT ===
+    checkPageBreak(150); // Vérifier qu'on a la place pour les infos
+
+    // Émetteur (gauche)
+    doc.fontSize(14)
+       .fillColor(colors.primary)
+       .text('ÉMETTEUR', 50, currentY);
+
+    let yPosLeft = currentY + 25;
+    doc.fontSize(11)
+       .fillColor('#000000');
+
+    if (quote.user.entreprise) {
+      doc.text(quote.user.entreprise, 50, yPosLeft, { width: 200 });
+      yPosLeft += 15;
+    }
+
+    doc.text(`${quote.user.prenom} ${quote.user.nom}`, 50, yPosLeft);
+    yPosLeft += 15;
+
     if (quote.user.adresse) {
-      yPosition += 15;
-      doc.text(quote.user.adresse, 50, yPosition);
+      doc.text(quote.user.adresse, 50, yPosLeft);
+      yPosLeft += 15;
     }
 
     if (quote.user.codePostal || quote.user.ville) {
-      yPosition += 15;
-      doc.text(`${quote.user.codePostal || ''} ${quote.user.ville || ''}`, 50, yPosition);
+      doc.text(`${quote.user.codePostal || ''} ${quote.user.ville || ''}`, 50, yPosLeft);
+      yPosLeft += 15;
     }
 
-    yPosition += 15;
-    doc.text(quote.user.pays, 50, yPosition);
+    doc.text(quote.user.pays, 50, yPosLeft);
+    yPosLeft += 15;
 
     if (quote.user.email) {
-      yPosition += 15;
-      doc.text(quote.user.email, 50, yPosition);
+      doc.text(`Email: ${quote.user.email}`, 50, yPosLeft);
+      yPosLeft += 15;
     }
 
     if (quote.user.telephone) {
-      yPosition += 15;
-      doc.text(quote.user.telephone, 50, yPosition);
+      doc.text(`Tél: ${quote.user.telephone}`, 50, yPosLeft);
+      yPosLeft += 15;
     }
 
     if (quote.user.siret) {
-      yPosition += 15;
-      doc.text(`SIRET: ${quote.user.siret}`, 50, yPosition);
+      doc.text(`SIRET: ${quote.user.siret}`, 50, yPosLeft);
+      yPosLeft += 15;
     }
 
-    // Informations du client (destinataire)
-    yPosition = 120;
+    // Client (droite)
+    let yPosRight = currentY;
     doc.fontSize(14)
        .fillColor(colors.primary)
-       .text('DESTINATAIRE', 300, yPosition);
+       .text('CLIENT', 320, yPosRight);
 
-    yPosition += 25;
+    yPosRight += 25;
     doc.fontSize(11)
-       .fillColor('#000000')
-       .text(`${quote.contact.prenom} ${quote.contact.nom}`, 300, yPosition);
+       .fillColor('#000000');
 
     if (quote.contact.entreprise) {
-      yPosition += 15;
-      doc.text(quote.contact.entreprise, 300, yPosition);
+      doc.text(quote.contact.entreprise, 320, yPosRight, { width: 200 });
+      yPosRight += 15;
     }
 
+    doc.text(`${quote.contact.prenom} ${quote.contact.nom}`, 320, yPosRight);
+    yPosRight += 15;
+
     if (quote.contact.adresse) {
-      yPosition += 15;
-      doc.text(quote.contact.adresse, 300, yPosition);
+      doc.text(quote.contact.adresse, 320, yPosRight);
+      yPosRight += 15;
     }
 
     if (quote.contact.codePostal || quote.contact.ville) {
-      yPosition += 15;
-      doc.text(`${quote.contact.codePostal || ''} ${quote.contact.ville || ''}`, 300, yPosition);
+      doc.text(`${quote.contact.codePostal || ''} ${quote.contact.ville || ''}`, 320, yPosRight);
+      yPosRight += 15;
     }
 
-    yPosition += 15;
-    doc.text(quote.contact.pays, 300, yPosition);
+    doc.text(quote.contact.pays, 320, yPosRight);
+    yPosRight += 15;
 
-    yPosition += 15;
-    doc.text(quote.contact.email, 300, yPosition);
+    doc.text(`Email: ${quote.contact.email}`, 320, yPosRight);
 
-    // Dates
-    yPosition = Math.max(yPosition + 40, 280);
+    currentY = Math.max(yPosLeft, yPosRight) + 30;
+
+    // === DATES ===
+    checkPageBreak(40);
     doc.fontSize(12)
-       .text(`Date de création: ${quote.dateCreation.toLocaleDateString('fr-FR')}`, 50, yPosition);
+       .fillColor('#666666')
+       .text(`Date: ${quote.dateCreation.toLocaleDateString('fr-FR')}`, 50, currentY);
+    doc.text(`Validité: ${quote.dateValidite.toLocaleDateString('fr-FR')}`, 320, currentY);
+    currentY += 30;
 
-    yPosition += 20;
-    doc.text(`Date de validité: ${quote.dateValidite.toLocaleDateString('fr-FR')}`, 50, yPosition);
-
-    // Objet du devis
-    yPosition += 40;
+    // === OBJET ===
+    checkPageBreak(60);
     doc.fontSize(14)
        .fillColor(colors.primary)
-       .text('OBJET DU DEVIS', 50, yPosition);
+       .text('OBJET DU DEVIS', 50, currentY);
+    currentY += 20;
 
-    yPosition += 25;
-    doc.fontSize(11)
+    doc.fontSize(12)
        .fillColor('#000000')
-       .text(quote.objet, 50, yPosition, { width: 500 });
+       .text(quote.objet, 50, currentY, { width: 495 });
+    currentY += 50;
 
-    // Tableau des articles
-    yPosition += 60;
-    const tableTop = yPosition;
+    // === TABLEAU DES PRESTATIONS ===
+    checkPageBreak(80); // S'assurer qu'on a la place pour l'en-tête du tableau
+
     const tableLeft = 50;
-    const tableWidth = 500;
+    const tableWidth = 495;
+    const rowHeight = 50; // Hauteur fixe par ligne pour éviter les coupures
 
-    // En-têtes du tableau
-    doc.fontSize(10)
-       .fillColor('#ffffff')
-       .rect(tableLeft, tableTop, tableWidth, 25)
-       .fill(colors.primary);
+    // Fonction pour dessiner l'en-tête du tableau
+    function drawTableHeader() {
+      doc.fontSize(10)
+         .fillColor('#ffffff')
+         .rect(tableLeft, currentY, tableWidth, 30)
+         .fill(colors.primary);
 
-    doc.fillColor('#ffffff')
-       .text('Désignation', tableLeft + 10, tableTop + 8, { width: 250 })
-       .text('Qté', tableLeft + 270, tableTop + 8, { width: 50, align: 'center' })
-       .text('Prix unitaire', tableLeft + 330, tableTop + 8, { width: 80, align: 'right' })
-       .text('Total HT', tableLeft + 420, tableTop + 8, { width: 70, align: 'right' });
+      doc.fillColor('#ffffff')
+         .text('DÉSIGNATION', tableLeft + 10, currentY + 10, { width: 200 })
+         .text('QTÉ', tableLeft + 220, currentY + 10, { width: 40, align: 'center' })
+         .text('PRIX UNITAIRE', tableLeft + 270, currentY + 10, { width: 80, align: 'center' })
+         .text('TOTAL HT', tableLeft + 360, currentY + 10, { width: 80, align: 'right' });
 
-    // Lignes du tableau
-    yPosition = tableTop + 25;
+      currentY += 30;
+    }
+
+    // Dessiner l'en-tête initial
+    drawTableHeader();
+
+    // Lignes du tableau avec gestion de pagination
     quote.items.forEach((item, index) => {
-      const rowHeight = 30;
-      const isEven = index % 2 === 0;
-      
+      // Vérifier si on a assez de place pour cette ligne
+      if (checkPageBreak(rowHeight + 10)) {
+        // Redessiner l'en-tête du tableau sur la nouvelle page
+        drawTableHeader();
+        logger.info(`PDF: En-tête tableau redessiné sur nouvelle page`);
+      }
+
       // Fond alterné
-      if (isEven) {
+      if (index % 2 === 0) {
         doc.fillColor('#f8f9fa')
-           .rect(tableLeft, yPosition, tableWidth, rowHeight)
+           .rect(tableLeft, currentY, tableWidth, rowHeight)
            .fill();
       }
 
+      // Contenu de la ligne
       doc.fillColor('#000000')
-         .fontSize(9)
-         .text(item.designation, tableLeft + 10, yPosition + 8, { width: 250 })
-         .text(item.quantite.toString(), tableLeft + 270, yPosition + 8, { width: 50, align: 'center' })
-         .text(item.prixUnitaire.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }), 
-               tableLeft + 330, yPosition + 8, { width: 80, align: 'right' })
-         .text(item.total.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }), 
-               tableLeft + 420, yPosition + 8, { width: 70, align: 'right' });
+         .fontSize(10)
+         .font('Helvetica-Bold')
+         .text(item.designation, tableLeft + 10, currentY + 8, { width: 200 });
 
       if (item.description) {
-        doc.fontSize(8)
+        doc.fontSize(9)
+           .font('Helvetica')
            .fillColor('#666666')
-           .text(item.description, tableLeft + 10, yPosition + 18, { width: 250 });
+           .text(item.description, tableLeft + 10, currentY + 22, { width: 200 });
       }
 
-      yPosition += rowHeight;
+      doc.fontSize(10)
+         .fillColor('#000000')
+         .font('Helvetica')
+         .text(item.quantite.toString(), tableLeft + 220, currentY + 15, { width: 40, align: 'center' })
+         .text(item.prixUnitaire.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }), 
+               tableLeft + 270, currentY + 15, { width: 80, align: 'center' })
+         .font('Helvetica-Bold')
+         .text(item.total.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }), 
+               tableLeft + 360, currentY + 15, { width: 80, align: 'right' });
+
+      currentY += rowHeight;
     });
 
-    // Totaux
-    yPosition += 20;
+    // === TOTAUX ===
+    checkPageBreak(120);
+    currentY += 30;
+
     const totalsLeft = 350;
+    const totalsWidth = 195;
 
-    doc.fontSize(10)
+    // Sous-total
+    doc.fontSize(11)
        .fillColor('#000000')
-       .text('Sous-total HT:', totalsLeft, yPosition, { align: 'left' })
+       .font('Helvetica')
+       .text('Sous-total HT:', totalsLeft, currentY)
        .text(quote.sousTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }), 
-             totalsLeft + 100, yPosition, { align: 'right' });
+             totalsLeft + 100, currentY, { width: 95, align: 'right' });
 
-    yPosition += 20;
-    doc.text('TVA (20%):', totalsLeft, yPosition, { align: 'left' })
+    currentY += 20;
+    // TVA
+    doc.text('TVA (20%):', totalsLeft, currentY)
        .text(quote.tva.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }), 
-             totalsLeft + 100, yPosition, { align: 'right' });
+             totalsLeft + 100, currentY, { width: 95, align: 'right' });
 
-    yPosition += 25;
-    doc.fontSize(12)
-       .fillColor(colors.primary)
-       .rect(totalsLeft - 10, yPosition - 5, 160, 25)
-       .fill()
+    currentY += 30;
+    // Total TTC
+    doc.fontSize(14)
        .fillColor('#ffffff')
-       .text('TOTAL TTC:', totalsLeft, yPosition + 5, { align: 'left' })
+       .rect(totalsLeft - 10, currentY - 8, totalsWidth + 20, 30)
+       .fill(colors.primary);
+
+    doc.font('Helvetica-Bold')
+       .text('TOTAL TTC:', totalsLeft, currentY + 5)
        .text(quote.total.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }), 
-             totalsLeft + 100, yPosition + 5, { align: 'right' });
+             totalsLeft + 100, currentY + 5, { width: 95, align: 'right' });
 
-    // Conditions générales
+    currentY += 50;
+
+    // === CONDITIONS ===
     if (quote.conditions) {
-      yPosition += 60;
+      checkPageBreak(80);
       doc.fontSize(12)
          .fillColor(colors.primary)
-         .text('CONDITIONS GÉNÉRALES', 50, yPosition);
+         .font('Helvetica-Bold')
+         .text('CONDITIONS GÉNÉRALES', 50, currentY);
 
-      yPosition += 25;
-      doc.fontSize(9)
+      currentY += 20;
+      doc.fontSize(10)
          .fillColor('#000000')
-         .text(quote.conditions, 50, yPosition, { width: 500 });
+         .font('Helvetica')
+         .text(quote.conditions, 50, currentY, { width: 495, lineGap: 3 });
+      
+      currentY += 60;
     }
 
-    // Notes
+    // === NOTES ===
     if (quote.notes) {
-      yPosition += 40;
+      checkPageBreak(80);
       doc.fontSize(12)
          .fillColor(colors.primary)
-         .text('NOTES', 50, yPosition);
+         .font('Helvetica-Bold')
+         .text('NOTES', 50, currentY);
 
-      yPosition += 25;
-      doc.fontSize(9)
+      currentY += 20;
+      doc.fontSize(10)
          .fillColor('#000000')
-         .text(quote.notes, 50, yPosition, { width: 500 });
+         .font('Helvetica')
+         .text(quote.notes, 50, currentY, { width: 495, lineGap: 3 });
     }
 
-    // Footer pour utilisateurs non-premium
+    // === FOOTER ===
     if (!options.isPremium) {
       doc.fontSize(8)
          .fillColor('#999999')
-         .text('Devis généré par VelocitaLeads CRM - www.velocitaleads.com', 50, 750, { align: 'center' });
+         .text('Devis généré par VelocitaLeads CRM - www.velocitaleads.com', 50, 750, { align: 'center', width: 495 });
     }
 
     // Finaliser le document
