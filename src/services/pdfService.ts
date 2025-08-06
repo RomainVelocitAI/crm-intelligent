@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+// import puppeteer from 'puppeteer'; // Désactivé pour Render
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
@@ -863,28 +863,8 @@ const generateBasicQuotePDF = async (quote: QuoteData, options: PDFGenerationOpt
 
 // Fonction pour générer un PDF avec Puppeteer (template premium)
 const generatePremiumQuotePDF = async (quote: QuoteData, options: PDFGenerationOptions): Promise<string> => {
-  let browser: any = null;
-  
-  try {
-    logPdf('pdf_generation_start_premium', quote.id, { numero: quote.numero });
-
-    // S'assurer que le dossier de sortie existe
-    const outputDir = config.pdf.outputDir;
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    // Nom du fichier PDF
-    const timestamp = Date.now();
-    const fileName = `Devis_${quote.numero}_${timestamp}.pdf`;
-    const tempFilePath = path.join(outputDir, `temp_${fileName}`);
-    const filePath = path.join(outputDir, fileName);
-
-    // Générer le HTML avec customisation premium
-    const htmlContent = generatePremiumQuotePDFTemplate(quote, options);
-
-    // Configuration de Puppeteer
-    browser = await puppeteer.launch({
+  // Puppeteer désactivé pour Render - utiliser le template basique
+  return generateBasicQuotePDF(quote, options);
       headless: 'new',
       args: [
         '--no-sandbox',
@@ -1441,28 +1421,12 @@ export const generateQuotePDF = async (quote: QuoteData, options?: Partial<PDFGe
 
 // Fonction de compatibilité pour l'ancienne API (à supprimer plus tard)
 export const generateQuotePDFLegacy = async (quote: QuoteData): Promise<string> => {
-  let browser: any = null;
-  
-  try {
-    logPdf('pdf_generation_start_legacy', quote.id, { numero: quote.numero });
-
-    // S'assurer que le dossier de sortie existe
-    const outputDir = config.pdf.outputDir;
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    // Nom du fichier PDF
-    const timestamp = Date.now();
-    const fileName = `Devis_${quote.numero}_${timestamp}.pdf`;
-    const tempFilePath = path.join(outputDir, `temp_${fileName}`);
-    const filePath = path.join(outputDir, fileName);
-
-    // Générer le HTML
-    const htmlContent = generateQuotePDFTemplate(quote);
-
-    // Configuration de Puppeteer
-    browser = await puppeteer.launch({
+  // Puppeteer désactivé pour Render - utiliser le template basique
+  return generateBasicQuotePDF(quote, {
+    templateType: TemplateType.BASIC,
+    isPremium: false,
+    protectionLevel: 'basic'
+  });
       headless: 'new',
       args: [
         '--no-sandbox',
