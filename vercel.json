@@ -1,12 +1,3 @@
 {
-  "buildCommand": "npm run build --prefix client",
-  "outputDirectory": "client/dist",
-  "installCommand": "cd client && npm install",
-  "framework": null,
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+  "root": "client"
 }
