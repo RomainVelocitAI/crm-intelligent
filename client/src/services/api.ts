@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api';
+// Utiliser VITE_API_URL si définie, sinon utiliser une URL relative
+const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
 
 // Instance Axios avec configuration de base
 export const api = axios.create({
@@ -8,6 +9,7 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Important pour CORS avec credentials
 });
 
 // Intercepteur pour ajouter le token d'authentification
