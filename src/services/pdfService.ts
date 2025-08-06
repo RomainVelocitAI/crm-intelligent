@@ -3,7 +3,7 @@ import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { PDFDocument as PDFLibDocument } from 'pdf-lib';
+const PDFLibDocument = require('pdf-lib').PDFDocument;
 import { config } from '@/config';
 import { logger, logPdf } from '@/utils/logger';
 
@@ -865,65 +865,6 @@ const generateBasicQuotePDF = async (quote: QuoteData, options: PDFGenerationOpt
 const generatePremiumQuotePDF = async (quote: QuoteData, options: PDFGenerationOptions): Promise<string> => {
   // Puppeteer désactivé pour Render - utiliser le template basique
   return generateBasicQuotePDF(quote, options);
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-      ],
-    });
-
-    const page = await browser.newPage();
-
-    // Configurer la page
-    await page.setContent(htmlContent, {
-      waitUntil: 'networkidle0',
-    });
-
-    // Générer le PDF temporaire (non protégé)
-    await page.pdf({
-      path: tempFilePath,
-      format: 'A4',
-      margin: {
-        top: '20mm',
-        right: '20mm',
-        bottom: '20mm',
-        left: '20mm',
-      },
-      printBackground: true,
-      preferCSSPageSize: true,
-    });
-
-    await browser.close();
-    browser = null;
-
-    // Appliquer la protection selon les options (ne plus forcer la protection ici)
-    if (options.protectionLevel === 'strong') {
-      const password = generatePDFPassword(quote.id, quote.numero, timestamp);
-      await protectPDFWithPassword(tempFilePath, filePath, password);
-    } else {
-      // Juste copier le fichier temporaire vers la destination finale
-      fs.renameSync(tempFilePath, filePath);
-    }
-    
-    logPdf('pdf_generation_success_premium', quote.id, { 
-      filePath,
-      fileSize: fs.statSync(filePath).size 
-    });
-
-    return filePath;
-
-  } catch (error) {
-    if (browser) {
-      await browser.close();
-    }
-    logger.error('Erreur lors de la génération du PDF avec Puppeteer:', error);
-    throw error;
-  }
 };
 
 // Template HTML premium avec customisation
@@ -1427,83 +1368,6 @@ export const generateQuotePDFLegacy = async (quote: QuoteData): Promise<string> 
     isPremium: false,
     protectionLevel: 'basic'
   });
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-      ],
-    });
-
-    const page = await browser.newPage();
-
-    // Configurer la page
-    await page.setContent(htmlContent, {
-      waitUntil: 'networkidle0',
-    });
-
-    // Générer le PDF temporaire (non protégé)
-    await page.pdf({
-      path: tempFilePath,
-      format: 'A4',
-      margin: {
-        top: '20mm',
-        right: '20mm',
-        bottom: '20mm',
-        left: '20mm',
-      },
-      printBackground: true,
-      preferCSSPageSize: true,
-    });
-
-    await browser.close();
-    browser = null;
-
-    // Générer le mot de passe de protection
-    const password = generatePDFPassword(quote.id, quote.numero, timestamp);
-    
-    // Protéger le PDF avec le mot de passe
-    await protectPDFWithPassword(tempFilePath, filePath, password);
-    
-    // Log du mot de passe pour information (en développement uniquement)
-    if (process.env.NODE_ENV === 'development') {
-      logger.info('PDF protégé généré (legacy)', {
-        quoteId: quote.id,
-        numero: quote.numero,
-        password: password, // ATTENTION: Ne pas logger en production !
-      });
-    }
-
-    logPdf('pdf_generation_success', quote.id, { 
-      numero: quote.numero,
-      filePath,
-      fileName 
-    });
-
-    logger.info('PDF généré avec succès', {
-      quoteId: quote.id,
-      numero: quote.numero,
-      filePath,
-    });
-
-    return filePath;
-  } catch (error) {
-    if (browser) {
-      await browser.close();
-    }
-
-    logPdf('pdf_generation_error', quote.id, {
-      numero: quote.numero,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-
-    logger.error('Erreur lors de la génération du PDF:', error);
-    throw error;
-  }
 };
 
 // Fonction pour récupérer le mot de passe d'un PDF (pour usage interne uniquement)

@@ -135,12 +135,14 @@ export const optionalAuth = async (
 
 // Utilitaires JWT
 export const generateTokens = (userId: string) => {
+  // @ts-ignore
   const accessToken = jwt.sign(
     { userId },
     config.jwt.secret,
     { expiresIn: config.jwt.expiresIn }
   );
 
+  // @ts-ignore
   const refreshToken = jwt.sign(
     { userId },
     config.jwt.refreshSecret,
