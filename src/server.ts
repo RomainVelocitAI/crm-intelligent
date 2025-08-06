@@ -39,6 +39,8 @@ app.use(cors({
     'http://69.62.110.246:3000',
     'http://dev.crm.velocit-ai.fr:3000',
     'https://dev.crm.velocit-ai.fr',
+    'https://crm-intelligent-lefi.vercel.app',
+    'https://crm-intelligent.vercel.app',
     'http://localhost:3002', 
     'http://127.0.0.1:3002', 
     'http://69.62.110.246:3002'

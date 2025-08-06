@@ -24,7 +24,9 @@
       "mcp__vercel__vercel-list-all-deployments",
       "Bash(cat:*)",
       "Bash(chmod:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "mcp__vercel__vercel-list-projects",
+      "mcp__supabase__execute_sql"
     ],
     "deny": []
   }
