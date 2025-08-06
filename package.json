@@ -49,6 +49,8 @@
     "nodemailer": "^6.9.7",
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.17.1",
+    "prisma": "^6.13.0",
+    "typescript": "^5.3.2",
     "winston": "^3.11.0"
   },
   "devDependencies": {
@@ -65,10 +67,8 @@
     "axios": "^1.10.0",
     "eslint": "^8.54.0",
     "jest": "^29.7.0",
-    "prisma": "^6.13.0",
     "ts-jest": "^29.1.1",
-    "tsx": "^4.6.2",
-    "typescript": "^5.3.2"
+    "tsx": "^4.6.2"
   },
   "engines": {
     "node": "20.x"
