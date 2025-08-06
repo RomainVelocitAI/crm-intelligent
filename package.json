@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc || true",
-    "start": "node dist/server.js",
+    "start": "node dist/register.js",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
     "type-check": "tsc --noEmit",
@@ -45,6 +45,7 @@
     "helmet": "^7.1.0",
     "js-tokens": "^9.0.1",
     "jsonwebtoken": "^9.0.2",
+    "module-alias": "^2.2.3",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.7",
     "pdf-lib": "^1.17.1",
@@ -72,5 +73,8 @@
   },
   "engines": {
     "node": "20.x"
+  },
+  "_moduleAliases": {
+    "@": "dist"
   }
 }
