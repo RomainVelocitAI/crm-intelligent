@@ -28,12 +28,13 @@ export default function OnboardingFlow() {
 
   // Quand l'onboarding est terminé
   const handleOnboardingComplete = () => {
+    // Forcer immédiatement la fermeture du modal
     setShowOnboarding(false);
     
-    // Forcer une actualisation du state après un délai pour s'assurer que le modal disparaît
+    // Recharger la page après un court délai pour rafraîchir l'état complet
     setTimeout(() => {
-      setShowOnboarding(false);
-    }, 100);
+      window.location.reload();
+    }, 500);
   };
 
   // Quand l'utilisateur accepte le tutoriel

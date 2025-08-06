@@ -28,6 +28,13 @@ VITE_SUPABASE_URL=https://dzproavuumvmootwgevi.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6cHJvYXZ1dW12bW9vdHdnZXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0OTQ1MzgsImV4cCI6MjA3MDA3MDUzOH0.uSSd6zU7y7fXRflOpN8V6xt2fzRkPx1EPJjSxMu_ALA
 ```
 
+📝 **Note de sécurité** : Ces variables VITE_* sont publiques par design :
+- `VITE_API_URL` : URL publique du backend (comme l'adresse d'un site web)
+- `VITE_SUPABASE_URL` : URL publique de Supabase
+- `VITE_SUPABASE_ANON_KEY` : Clé **anonyme** publique (protégée par RLS côté Supabase)
+
+Les vraies clés secrètes (JWT_SECRET, DATABASE_URL, etc.) restent sécurisées sur le backend.
+
 ⚠️ **IMPORTANT** : Après avoir ajouté ces variables, vous devez **redéployer** votre application sur Vercel pour qu'elles soient prises en compte !
 
 ### 3. ✅ Tester l'Application

@@ -51,6 +51,14 @@ export function useOnboarding() {
     mutationFn: onboardingService.saveOnboarding,
     onSuccess: (data) => {
       toast.success('Onboarding complété avec succès !');
+      // Forcer la mise à jour immédiate des données dans le cache
+      queryClient.setQueryData(['userPreferences'], (oldData: any) => ({
+        ...oldData,
+        data: {
+          ...oldData?.data,
+          onboardingCompleted: true
+        }
+      }));
       queryClient.invalidateQueries({ queryKey: ['userPreferences'] });
       queryClient.invalidateQueries({ queryKey: ['metrics'] });
     },
