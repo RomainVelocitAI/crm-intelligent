@@ -18,13 +18,17 @@ FRONTEND_URL=https://crm-intelligent-lefi.vercel.app
 
 ### 2. ✅ Configurer les variables d'environnement sur Vercel
 
-Si ce n'est pas déjà fait, ajoutez ces variables dans les paramètres Vercel :
+⚠️ **CRITIQUE** : Sans ces variables, le frontend essaiera d'appeler son propre domaine au lieu du backend, causant des erreurs 405 !
+
+Dans les paramètres Vercel (Settings > Environment Variables), ajoutez :
 
 ```
 VITE_API_URL=https://crm-intelligent.onrender.com
 VITE_SUPABASE_URL=https://dzproavuumvmootwgevi.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6cHJvYXZ1dW12bW9vdHdnZXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0OTQ1MzgsImV4cCI6MjA3MDA3MDUzOH0.uSSd6zU7y7fXRflOpN8V6xt2fzRkPx1EPJjSxMu_ALA
 ```
+
+⚠️ **IMPORTANT** : Après avoir ajouté ces variables, vous devez **redéployer** votre application sur Vercel pour qu'elles soient prises en compte !
 
 ### 3. ✅ Tester l'Application
 
