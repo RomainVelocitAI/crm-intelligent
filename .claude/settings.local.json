@@ -20,7 +20,11 @@
       "Bash(sed:*)",
       "mcp__sequential-thinking__sequentialthinking",
       "mcp__supabase__list_tables",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "mcp__vercel__vercel-list-all-deployments",
+      "Bash(cat:*)",
+      "Bash(chmod:*)",
+      "Bash(git rm:*)"
     ],
     "deny": []
   }
