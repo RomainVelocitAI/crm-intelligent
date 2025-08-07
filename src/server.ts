@@ -51,11 +51,29 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// Rate limiting
+// Rate limiting avec configuration pour proxy
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 1000, // limite à 1000 requêtes par fenêtre pour le développement
   message: 'Trop de requêtes depuis cette IP, réessayez plus tard.',
+  standardHeaders: true, // Retourne les headers `RateLimit-*`
+  legacyHeaders: false, // Désactive les headers `X-RateLimit-*`
+  // Configuration pour proxy - utilise l'IP du client depuis les headers du proxy
+  keyGenerator: (req: express.Request) => {
+    // Sur Render, l'IP réelle est dans x-forwarded-for
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) {
+      // Prend la première IP de la liste (client original)
+      const ips = (typeof forwarded === 'string' ? forwarded : forwarded[0]).split(',');
+      return ips[0].trim();
+    }
+    // Fallback sur l'IP de la connexion
+    return req.ip || (req.connection as any)?.remoteAddress || 'unknown';
+  },
+  skip: (req: express.Request) => {
+    // Skip rate limiting pour les routes de santé
+    return req.path === '/health';
+  }
 });
 app.use('/api/', limiter);
 
