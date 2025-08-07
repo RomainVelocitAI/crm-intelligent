@@ -52,9 +52,9 @@ async function resetPassword(email, newPassword) {
 
     console.log(`${colors.green}✓ User found: ${user.prenom} ${user.nom}${colors.reset}`);
     
-    // Hasher le nouveau mot de passe avec 10 rounds (comme configuré dans .env)
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    console.log(`${colors.yellow}  New hash (first 20 chars): ${hashedPassword.substring(0, 20)}...${colors.reset}`);
+    // Hasher le nouveau mot de passe avec 12 rounds (valeur par défaut du backend sur Render)
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    console.log(`${colors.yellow}  New hash with 12 rounds (DEFAULT on Render): ${hashedPassword.substring(0, 20)}...${colors.reset}`);
     
     // Mettre à jour le mot de passe
     await prisma.user.update({

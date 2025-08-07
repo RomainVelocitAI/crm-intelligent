@@ -90,6 +90,21 @@ app.get('/health', (req, res) => {
   });
 });
 
+// DEBUG TEMPORAIRE - À SUPPRIMER
+app.get('/debug-env', (req, res) => {
+  const dbUrl = process.env.DATABASE_URL || 'NOT SET';
+  res.json({
+    timestamp: new Date().toISOString(),
+    env: {
+      isDbSet: !!process.env.DATABASE_URL,
+      dbHost: dbUrl.includes('dzproavuumvmootwgevi') ? 'CORRECT_SUPABASE' : 'WRONG_DB',
+      bcryptRounds: process.env.BCRYPT_ROUNDS || 'NOT SET (default: 12)',
+      nodeEnv: process.env.NODE_ENV,
+    },
+    message: 'Debug endpoint - remove after fixing'
+  });
+});
+
 // Favicon pour éviter l'erreur 404
 app.get('/favicon.ico', (req, res) => {
   res.status(204).end();

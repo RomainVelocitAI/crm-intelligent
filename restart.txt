@@ -1,2 +1,4 @@
-# Restart trigger Thu Aug  7 15:52:45 UTC 2025
-# Force redeploy after Prisma sync
+# Restart trigger Thu Aug  7 16:10:00 UTC 2025
+# Force redeploy - bcrypt 12 rounds configured
+# All passwords recreated with 12 rounds
+# Auth still failing for Romain accounts
