@@ -313,8 +313,11 @@ export default function QuotesPage() {
         // Créer un lien de téléchargement
         const link = document.createElement('a');
         link.href = `/${data.data.pdfPath}`;
-        link.download = `devis_${quote.numero}.pdf`;
+        link.download = `Devis_${quote.numero}.pdf`;
+        link.target = '_blank';
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
         
         // Afficher le message approprié selon la réponse du serveur
         if (data.data.statusChanged) {

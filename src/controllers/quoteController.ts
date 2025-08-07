@@ -3,7 +3,7 @@ import { PrismaClient, QuoteStatus } from '@prisma/client';
 import { body, query, validationResult } from 'express-validator';
 import { AuthRequest } from '@/middleware/auth';
 import { logger } from '@/utils/logger';
-import { sendQuoteEmail, sendQuoteRelanceEmail } from '@/services/emailService';
+import { sendQuoteEmail, sendQuoteRelanceEmail } from '@/services/resendEmailService';
 import { generateQuotePDF, TemplateType } from '@/services/pdfService';
 import { calculateContactMetrics, determineContactStatus } from '@/controllers/contactController';
 import fs from 'fs';
@@ -779,6 +779,11 @@ export const testQuotePDF = async (req: AuthRequest, res: Response) => {
       // Génération PDF
       const pdfPath = await generateQuotePDF(quote as any, pdfOptions);
       
+      // Convertir le chemin absolu en chemin relatif pour le frontend
+      // pdfPath est quelque chose comme './uploads/pdfs/Devis_xxx.pdf'
+      // On doit le convertir en 'uploads/pdfs/Devis_xxx.pdf' pour que le frontend puisse y accéder
+      const relativePath = pdfPath.replace(/^\.\//, '');
+      
       // Le téléchargement ne change plus automatiquement le statut
       // Le statut doit être changé via la validation explicite (BROUILLON -> PRET)
       let updatedQuote = quote;
@@ -787,7 +792,7 @@ export const testQuotePDF = async (req: AuthRequest, res: Response) => {
         success: true,
         message: 'PDF généré avec succès',
         data: { 
-          pdfPath,
+          pdfPath: relativePath,
           templateType: pdfOptions.templateType,
           isPremium: pdfOptions.isPremium,
           statusChanged: false,
@@ -884,10 +889,14 @@ export const sendQuote = async (req: AuthRequest, res: Response) => {
       };
 
       // Générer le PDF
+      logger.info('Génération du PDF pour le devis:', quote.numero);
       const pdfPath = await generateQuotePDF(quote as any, pdfOptions);
+      logger.info('PDF généré avec succès:', pdfPath);
 
       // Envoyer l'email
+      logger.info('Envoi de l\'email pour le devis:', quote.numero);
       await sendQuoteEmail(quote as any, pdfPath, message);
+      logger.info('Email envoyé avec succès');
 
       // Mettre à jour le statut du devis
       const updatedQuote = await prisma.quote.update({

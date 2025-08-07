@@ -3,7 +3,7 @@ import { PrismaClient, ContactStatus } from '@prisma/client';
 import { body, query, validationResult } from 'express-validator';
 import { AuthRequest } from '@/middleware/auth';
 import { logger } from '@/utils/logger';
-import { sendTrackedEmail } from '@/services/emailService';
+import { sendTrackedEmail } from '@/services/resendEmailService';
 
 const prisma = new PrismaClient();
 

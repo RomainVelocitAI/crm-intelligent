@@ -5,7 +5,7 @@ import { body, validationResult } from 'express-validator';
 import { generateTokens, verifyRefreshToken, AuthRequest } from '@/middleware/auth';
 import { config } from '@/config';
 import { logger, logAuth } from '@/utils/logger';
-import { sendWelcomeEmail } from '@/services/emailService';
+import { sendWelcomeEmail } from '@/services/resendEmailService';
 import { saveUserToAirtable } from '@/services/airtableService';
 
 const prisma = new PrismaClient();

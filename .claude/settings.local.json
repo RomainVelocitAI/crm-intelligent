@@ -26,7 +26,14 @@
       "Bash(chmod:*)",
       "Bash(git rm:*)",
       "mcp__vercel__vercel-list-projects",
-      "mcp__supabase__execute_sql"
+      "mcp__supabase__execute_sql",
+      "Bash(node:*)",
+      "Bash(pkill:*)",
+      "Bash(true)",
+      "Bash(mkdir:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx tsx:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
