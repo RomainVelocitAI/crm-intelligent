@@ -105,6 +105,44 @@ app.get('/debug-env', (req, res) => {
   });
 });
 
+// DEBUG TEMPORAIRE - Récupérer les logs d'auth
+app.get('/debug-auth-logs', async (req, res) => {
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    // Compter les utilisateurs
+    const userCount = await prisma.user.count();
+    
+    // Récupérer les emails des utilisateurs
+    const users = await prisma.user.findMany({
+      select: { 
+        email: true, 
+        password: true 
+      }
+    });
+    
+    await prisma.$disconnect();
+    
+    res.json({
+      timestamp: new Date().toISOString(),
+      userCount,
+      users: users.map(u => ({
+        email: u.email,
+        hashPrefix: u.password.substring(0, 7)
+      })),
+      message: 'Debug auth logs - remove after fixing'
+    });
+  } catch (error: any) {
+    res.json({
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      stack: error.stack,
+      message: 'Error in debug auth logs'
+    });
+  }
+});
+
 // Favicon pour éviter l'erreur 404
 app.get('/favicon.ico', (req, res) => {
   res.status(204).end();
