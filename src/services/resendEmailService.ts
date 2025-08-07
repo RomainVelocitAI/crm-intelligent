@@ -10,12 +10,18 @@ const resend = new Resend(process.env.RESEND_API_KEY || '');
 
 // En mode développement, remplacer l'email du destinataire par l'email de test
 const getRecipientEmail = (email: string): string => {
-  // Si on n'a pas de domaine vérifié, Resend n'autorise l'envoi qu'à notre propre adresse
-  // Pour l'instant, on force le mode dev jusqu'à ce que le domaine soit vérifié
-  if (process.env.NODE_ENV === 'development' || process.env.RESEND_DOMAIN_VERIFIED !== 'verified') {
-    return process.env.TEST_EMAIL || 'direction@velocit-ai.fr';
+  // Si on a un domaine vérifié ET qu'on est en production, envoyer au vrai destinataire
+  if (process.env.RESEND_DOMAIN_VERIFIED === 'verified' && process.env.NODE_ENV === 'production') {
+    return email;
   }
-  return email;
+  
+  // Si on force l'envoi en production (pour les tests)
+  if (process.env.FORCE_PRODUCTION_EMAIL === 'true') {
+    return email;
+  }
+  
+  // Sinon, rediriger vers l'email de test
+  return process.env.TEST_EMAIL || 'direction@velocit-ai.fr';
 };
 
 // Types

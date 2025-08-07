@@ -33,7 +33,12 @@
       "Bash(mkdir:*)",
       "Bash(npx prisma:*)",
       "Bash(npx tsx:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(source .env)",
+      "Bash(pm2 logs:*)",
+      "Bash(pm2 restart:*)",
+      "Bash(pm2 list:*)"
     ],
     "deny": []
   }

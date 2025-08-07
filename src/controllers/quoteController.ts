@@ -575,7 +575,6 @@ export const deleteQuote = async (req: AuthRequest, res: Response) => {
         message: 'Devis supprimé définitivement',
         action: 'deleted'
       });
-      return;
     }
 
     // Vérification légale pour les devis acceptés
@@ -604,7 +603,6 @@ export const deleteQuote = async (req: AuthRequest, res: Response) => {
         action: 'archived',
         needsConfirmation: true
       });
-      return;
     }
 
     // Cas par défaut - ne devrait pas arriver
@@ -788,27 +786,32 @@ export const downloadQuotePDF = async (req: AuthRequest, res: Response) => {
       // Servir le fichier PDF directement
       const fileName = `Devis_${quote.numero}.pdf`;
       
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
+      // Utiliser res.sendFile pour une meilleure fiabilité
+      const options = {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${fileName}"`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      };
       
-      // Lire et envoyer le fichier
-      const fileStream = fs.createReadStream(pdfPath);
+      // sendFile nécessite un chemin absolu
+      const absolutePath = path.resolve(pdfPath);
       
-      fileStream.on('error', (error: any) => {
-        logger.error('Erreur lors de la lecture du fichier PDF:', error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la lecture du fichier',
-          });
+      // sendFile gère automatiquement le streaming et la fermeture du fichier
+      return res.sendFile(absolutePath, options, (err) => {
+        if (err) {
+          logger.error('Erreur lors de l\'envoi du fichier PDF:', err);
+          if (!res.headersSent) {
+            res.status(500).json({
+              success: false,
+              message: 'Erreur lors de l\'envoi du fichier',
+            });
+          }
         }
       });
-      
-      // Pipe le fichier vers la réponse
-      return fileStream.pipe(res);
       
     } catch (pdfError: any) {
       logger.error('Erreur lors de la génération PDF:', pdfError);
@@ -889,24 +892,29 @@ export const testQuotePDF = async (req: AuthRequest, res: Response) => {
       // Servir le fichier PDF directement
       const fileName = `Devis_${quote.numero}.pdf`;
       
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      // Utiliser res.sendFile pour une meilleure fiabilité
+      const options = {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${fileName}"`
+        }
+      };
       
-      // Lire et envoyer le fichier
-      const fileStream = fs.createReadStream(pdfPath);
+      // sendFile nécessite un chemin absolu
+      const absolutePath = path.resolve(pdfPath);
       
-      fileStream.on('error', (error: any) => {
-        logger.error('Erreur lors de la lecture du fichier PDF:', error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la lecture du fichier PDF',
-          });
+      // sendFile gère automatiquement le streaming et la fermeture du fichier
+      return res.sendFile(absolutePath, options, (err) => {
+        if (err) {
+          logger.error('Erreur lors de l\'envoi du fichier PDF:', err);
+          if (!res.headersSent) {
+            res.status(500).json({
+              success: false,
+              message: 'Erreur lors de la lecture du fichier PDF',
+            });
+          }
         }
       });
-      
-      // Pipe le fichier vers la réponse
-      return fileStream.pipe(res);
       
     } catch (pdfError: any) {
       logger.error('Erreur lors de la génération PDF:', pdfError);
