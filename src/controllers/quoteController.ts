@@ -797,8 +797,9 @@ export const downloadQuotePDF = async (req: AuthRequest, res: Response) => {
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       
-      // Envoyer le buffer PDF directement
-      return res.send(pdfBuffer);
+      // CORRECTION: Utiliser res.end() pour préserver les données binaires
+      // res.send() peut altérer les données binaires avec les proxies
+      return res.end(pdfBuffer);
       
     } catch (pdfError: any) {
       logger.error('Erreur lors de la génération PDF:', pdfError);

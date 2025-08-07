@@ -19,9 +19,15 @@ const getRecipientEmail = (email: string): string => {
     originalEmail: email,
   });
   
-  // En production (sur Render ou NODE_ENV=production), toujours envoyer au vrai destinataire
-  // Vérifier aussi la variable RENDER qui est automatiquement définie sur Render
-  if (process.env.NODE_ENV === 'production' || process.env.RENDER === 'true') {
+  // CORRECTION: Forcer la détection de production sur Render
+  // Render définit automatiquement IS_PULL_REQUEST=false en production
+  const isProduction = 
+    process.env.NODE_ENV === 'production' || 
+    process.env.RENDER === 'true' ||
+    process.env.IS_PULL_REQUEST === 'false' ||
+    process.env.RENDER_SERVICE_NAME === 'velocitaleads-api';
+  
+  if (isProduction) {
     logger.info('✅ Mode production détecté - envoi au vrai destinataire:', email);
     return email;
   }
