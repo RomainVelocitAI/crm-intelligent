@@ -789,15 +789,16 @@ export const downloadQuotePDF = async (req: AuthRequest, res: Response) => {
       // Lire le fichier PDF
       const pdfBuffer = fs.readFileSync(pdfPath);
       
-      // Encoder en base64 pour éviter la corruption par le proxy
-      const pdfBase64 = pdfBuffer.toString('base64');
+      // Définir les headers appropriés pour un téléchargement PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Length', pdfBuffer.length.toString());
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       
-      // Envoyer en JSON avec base64
-      return res.json({
-        success: true,
-        fileName: fileName,
-        data: pdfBase64
-      });
+      // Envoyer le buffer PDF directement
+      return res.send(pdfBuffer);
       
     } catch (pdfError: any) {
       logger.error('Erreur lors de la génération PDF:', pdfError);

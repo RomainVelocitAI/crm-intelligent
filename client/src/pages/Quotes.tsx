@@ -308,40 +308,27 @@ export default function QuotesPage() {
       });
       
       if (response.ok) {
-        // Le serveur renvoie maintenant le PDF en base64
-        const data = await response.json();
+        // Le serveur renvoie maintenant le PDF directement en binaire
+        const blob = await response.blob();
         
-        if (data.success && data.data) {
-          // Décoder le base64 en blob
-          const byteCharacters = atob(data.data);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: 'application/pdf' });
-          
-          // Créer un URL temporaire pour le blob
-          const url = window.URL.createObjectURL(blob);
-          
-          // Créer un lien de téléchargement
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = data.fileName || `Devis_${quote.numero}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          
-          // Nettoyer
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-          
-          toast.success('PDF téléchargé avec succès !');
-          
-          // Recharger les devis pour refléter le verrouillage
-          queryClient.invalidateQueries({ queryKey: ['quotes'] });
-        } else {
-          toast.error('Erreur lors de la génération du PDF');
-        }
+        // Créer un URL temporaire pour le blob
+        const url = window.URL.createObjectURL(blob);
+        
+        // Créer un lien de téléchargement
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Devis_${quote.numero}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Nettoyer
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        toast.success('PDF téléchargé avec succès !');
+        
+        // Recharger les devis pour refléter le verrouillage
+        queryClient.invalidateQueries({ queryKey: ['quotes'] });
       } else {
         // En cas d'erreur, essayer de lire le message d'erreur
         let errorMessage = 'Erreur lors de la génération du PDF';
