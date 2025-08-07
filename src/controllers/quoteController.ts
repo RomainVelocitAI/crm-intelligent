@@ -789,17 +789,15 @@ export const downloadQuotePDF = async (req: AuthRequest, res: Response) => {
       // Lire le fichier PDF
       const pdfBuffer = fs.readFileSync(pdfPath);
       
-      // Définir les headers - application/pdf pour éviter la corruption par le proxy
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      res.setHeader('Content-Length', pdfBuffer.length.toString());
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      res.setHeader('X-Content-Type-Options', 'nosniff');
+      // Encoder en base64 pour éviter la corruption par le proxy
+      const pdfBase64 = pdfBuffer.toString('base64');
       
-      // Envoyer le buffer directement
-      return res.send(pdfBuffer);
+      // Envoyer en JSON avec base64
+      return res.json({
+        success: true,
+        fileName: fileName,
+        data: pdfBase64
+      });
       
     } catch (pdfError: any) {
       logger.error('Erreur lors de la génération PDF:', pdfError);
@@ -883,17 +881,15 @@ export const testQuotePDF = async (req: AuthRequest, res: Response) => {
       // Lire le fichier PDF en buffer pour compatibilité avec les proxies (Render, etc.)
       const pdfBuffer = fs.readFileSync(pdfPath);
       
-      // Définir les headers - application/pdf pour éviter la corruption par le proxy
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      res.setHeader('Content-Length', pdfBuffer.length.toString());
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      res.setHeader('X-Content-Type-Options', 'nosniff');
+      // Encoder en base64 pour éviter la corruption par le proxy
+      const pdfBase64 = pdfBuffer.toString('base64');
       
-      // Envoyer le buffer directement
-      return res.send(pdfBuffer);
+      // Envoyer en JSON avec base64
+      return res.json({
+        success: true,
+        fileName: fileName,
+        data: pdfBase64
+      });
       
     } catch (pdfError: any) {
       logger.error('Erreur lors de la génération PDF:', pdfError);

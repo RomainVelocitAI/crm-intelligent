@@ -3,7 +3,9 @@ import { body, param, query } from 'express-validator';
 // Validation pour les emails
 export const emailValidation = body('email')
   .isEmail()
-  .withMessage('Email invalide');
+  .withMessage('Email invalide')
+  .trim()
+  .toLowerCase();
 
 // Validation pour les mots de passe
 export const passwordValidation = body('password')

@@ -217,7 +217,7 @@ router.get('/pixel/:quoteId/:email', async (req, res) => {
       
       try {
         // Utiliser une requête SQL directe pour éviter les problèmes de schéma
-        const quote = await prisma.$queryRaw`
+        const quote = await prisma.$queryRaw<Array<{id: string, statut: string}>>`
           SELECT id, statut FROM quotes WHERE id = ${quoteId}
         `;
 
@@ -410,7 +410,7 @@ router.get('/pdf/:quoteId/:email/:filename', async (req, res) => {
         });
         
         // Mettre à jour le statut du devis vers VU
-        const quote = await prisma.$queryRaw`
+        const quote = await prisma.$queryRaw<Array<{id: string, statut: string}>>`
           SELECT id, statut FROM quotes WHERE id = ${quoteId}
         `;
         
