@@ -120,24 +120,14 @@ async function createExampleData(userId: string) {
 }
 
 export const registerValidation = [
-  body('email').isEmail().normalizeEmail({
-    gmail_remove_dots: false,  // Ne pas enlever les points pour Gmail  
-    gmail_remove_subaddress: false,  // Ne pas enlever +xxx
-    gmail_convert_googlemaildotcom: true,  // Convertir googlemail.com en gmail.com
-    gmail_lowercase: true  // Mettre en minuscules
-  }).withMessage('Email invalide'),
+  body('email').isEmail().withMessage('Email invalide'),
   body('password').isLength({ min: 8 }).withMessage('Le mot de passe doit contenir au moins 8 caractères'),
   body('nom').trim().isLength({ min: 2 }).withMessage('Le nom doit contenir au moins 2 caractères'),
   body('prenom').trim().isLength({ min: 2 }).withMessage('Le prénom doit contenir au moins 2 caractères'),
 ];
 
 export const loginValidation = [
-  body('email').isEmail().normalizeEmail({
-    gmail_remove_dots: false,  // Ne pas enlever les points pour Gmail  
-    gmail_remove_subaddress: false,  // Ne pas enlever +xxx
-    gmail_convert_googlemaildotcom: true,  // Convertir googlemail.com en gmail.com
-    gmail_lowercase: true  // Mettre en minuscules
-  }).withMessage('Email invalide'),
+  body('email').isEmail().withMessage('Email invalide'),
   body('password').notEmpty().withMessage('Mot de passe requis'),
 ];
 
