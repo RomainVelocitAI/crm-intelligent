@@ -3,7 +3,12 @@ import { body, param, query } from 'express-validator';
 // Validation pour les emails
 export const emailValidation = body('email')
   .isEmail()
-  .normalizeEmail()
+  .normalizeEmail({
+    gmail_remove_dots: false,  // Ne pas enlever les points pour Gmail
+    gmail_remove_subaddress: false,  // Ne pas enlever +xxx
+    gmail_convert_googlemaildotcom: true,  // Convertir googlemail.com en gmail.com
+    gmail_lowercase: true  // Mettre en minuscules
+  })
   .withMessage('Email invalide');
 
 // Validation pour les mots de passe
