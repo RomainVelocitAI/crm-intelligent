@@ -1,1 +1,2 @@
-# Restart trigger Thu Aug  7 15:40:21 UTC 2025
+# Restart trigger Thu Aug  7 15:52:45 UTC 2025
+# Force redeploy after Prisma sync
