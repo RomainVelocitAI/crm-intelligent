@@ -734,86 +734,93 @@ export const restoreQuote = async (req: AuthRequest, res: Response) => {
 export const downloadQuotePDF = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    // Récupérer le devis
-    const quote = await prisma.quote.findFirst({
+    
+    if (!req.user?.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Non authentifié',
+      });
+    }
+
+    // Récupérer le devis avec toutes les relations
+    const quote = await prisma.quote.findUnique({
       where: {
         id,
-        userId: req.user!.id,
+        userId: req.user.id,
       },
       include: {
+        user: true,
         contact: true,
         items: {
-          orderBy: { ordre: 'asc' },
+          include: {
+            service: true,
+          },
         },
-        user: true,
       },
     });
+
     if (!quote) {
       return res.status(404).json({
         success: false,
         message: 'Devis non trouvé',
       });
     }
-    try {
-      // Récupérer les informations de l'utilisateur pour déterminer le type de template
-      const user = await prisma.user.findUnique({
-        where: { id: req.user!.id },
-        select: { isPremium: true }
-      });
-      // Options de génération PDF basées sur le statut premium
-      const pdfOptions = {
-        templateType: user?.isPremium ? TemplateType.PREMIUM : TemplateType.BASIC,
-        isPremium: user?.isPremium || false,
-        customBranding: user?.isPremium ? {
-          colors: {
-            primary: '#007bff',
-            secondary: '#6c757d'
-          }
-        } : undefined
-      };
-      // Génération PDF
-      const pdfPath = await generateQuotePDF(quote as any, pdfOptions);
-      
-      // Vérifier que le fichier existe
-      if (!fs.existsSync(pdfPath)) {
-        logger.error('Fichier PDF non trouvé:', pdfPath);
-        return res.status(404).json({
+
+    // Générer le PDF
+    const pdfOptions = {
+      format: 'A4',
+      margin: {
+        top: '20mm',
+        right: '15mm',
+        bottom: '20mm',
+        left: '15mm',
+      },
+    };
+
+    const { pdfPath, fileName } = await generateQuotePDF(
+      quote as any,
+      pdfOptions
+    );
+
+    // SOLUTION ALTERNATIVE: Streaming direct avec headers optimisés
+    const stream = fs.createReadStream(pdfPath);
+    const stat = fs.statSync(pdfPath);
+    
+    // Headers spécifiques pour éviter la corruption via proxy
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Length', stat.size.toString());
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Transfer-Encoding', 'binary');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+    res.setHeader('Expires', '-1');
+    res.setHeader('Pragma', 'no-cache');
+    
+    // Streaming direct
+    stream.pipe(res);
+    
+    // Nettoyer après envoi
+    stream.on('end', () => {
+      if (fs.existsSync(pdfPath)) {
+        fs.unlinkSync(pdfPath);
+      }
+    });
+    
+    stream.on('error', (error) => {
+      logger.error('Erreur streaming PDF:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
           success: false,
-          message: 'Fichier PDF non trouvé',
+          message: 'Erreur lors du téléchargement du PDF',
         });
       }
-      
-      // Servir le fichier PDF directement
-      const fileName = `Devis_${quote.numero}.pdf`;
-      
-      // Lire le fichier PDF
-      const pdfBuffer = fs.readFileSync(pdfPath);
-      
-      // Définir les headers appropriés pour un téléchargement PDF
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Length', pdfBuffer.length.toString());
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
-      // CORRECTION: Utiliser res.end() pour préserver les données binaires
-      // res.send() peut altérer les données binaires avec les proxies
-      return res.end(pdfBuffer);
-      
-    } catch (pdfError: any) {
-      logger.error('Erreur lors de la génération PDF:', pdfError);
-      return res.status(500).json({
-        success: false,
-        message: 'Erreur lors de la génération du PDF',
-        details: pdfError.message,
-      });
-    }
+    });
+    
   } catch (error: any) {
-    logger.error('Erreur lors du téléchargement PDF:', error);
+    logger.error('Erreur downloadQuotePDF:', error);
     return res.status(500).json({
       success: false,
-      message: 'Erreur interne du serveur',
+      message: 'Erreur lors du téléchargement du PDF',
       details: error.message,
     });
   }
