@@ -115,6 +115,39 @@ app.get('/debug-auth-logs', (req, res) => {
   });
 });
 
+// DEBUG TEMPORAIRE - Test simple de connexion DB
+app.get('/debug-db-test', async (req, res) => {
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient();
+  
+  try {
+    // Test simple : compter les utilisateurs
+    const count = await prisma.user.count();
+    const emails = await prisma.user.findMany({
+      select: { email: true },
+      take: 10
+    });
+    
+    return res.json({
+      success: true,
+      userCount: count,
+      emails: emails.map(u => u.email),
+      dbUrl: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    console.error('DB Test Error:', error);
+    return res.json({
+      success: false,
+      error: error.message,
+      dbUrl: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
+      timestamp: new Date().toISOString()
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
+});
+
 // DEBUG TEMPORAIRE - Vérifier un compte spécifique
 app.post('/debug-check-account', async (req, res) => {
   const bcrypt = require('bcryptjs');
