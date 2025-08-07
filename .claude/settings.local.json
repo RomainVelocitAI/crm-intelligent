@@ -38,7 +38,12 @@
       "Bash(source .env)",
       "Bash(pm2 logs:*)",
       "Bash(pm2 restart:*)",
-      "Bash(pm2 list:*)"
+      "Bash(pm2 list:*)",
+      "mcp__playwright__playwright_navigate",
+      "mcp__playwright__playwright_console_logs",
+      "mcp__playwright__playwright_evaluate",
+      "mcp__playwright__playwright_fill",
+      "mcp__playwright__playwright_click"
     ],
     "deny": []
   }
