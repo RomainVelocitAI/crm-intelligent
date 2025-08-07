@@ -7,6 +7,7 @@ import metricsRoutes from './metrics';
 import trackingRoutes from './tracking';
 import publicRoutes from './public';
 import onboardingRoutes from './onboarding';
+import debugRoutes from './debug';
 
 const router = Router();
 
@@ -20,5 +21,8 @@ router.use('/services', serviceRoutes);
 router.use('/metrics', metricsRoutes);
 router.use('/tracking', trackingRoutes);
 router.use('/onboarding', onboardingRoutes);
+
+// Routes de debug (production seulement)
+router.use('/debug', debugRoutes);
 
 export default router;

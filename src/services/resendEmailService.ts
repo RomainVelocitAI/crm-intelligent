@@ -10,18 +10,32 @@ const resend = new Resend(process.env.RESEND_API_KEY || '');
 
 // En mode développement, remplacer l'email du destinataire par l'email de test
 const getRecipientEmail = (email: string): string => {
-  // En production (sur Render), toujours envoyer au vrai destinataire
-  if (process.env.NODE_ENV === 'production') {
+  // Logs pour debug
+  logger.info('📧 getRecipientEmail Debug:', {
+    NODE_ENV: process.env.NODE_ENV,
+    RENDER: process.env.RENDER,
+    FORCE_PRODUCTION_EMAIL: process.env.FORCE_PRODUCTION_EMAIL,
+    TEST_EMAIL: process.env.TEST_EMAIL,
+    originalEmail: email,
+  });
+  
+  // En production (sur Render ou NODE_ENV=production), toujours envoyer au vrai destinataire
+  // Vérifier aussi la variable RENDER qui est automatiquement définie sur Render
+  if (process.env.NODE_ENV === 'production' || process.env.RENDER === 'true') {
+    logger.info('✅ Mode production détecté - envoi au vrai destinataire:', email);
     return email;
   }
   
   // Si on force l'envoi en production (pour les tests)
   if (process.env.FORCE_PRODUCTION_EMAIL === 'true') {
+    logger.info('✅ Force production email - envoi au vrai destinataire:', email);
     return email;
   }
   
   // En développement, rediriger vers l'email de test
-  return process.env.TEST_EMAIL || 'direction@velocit-ai.fr';
+  const testEmail = process.env.TEST_EMAIL || 'direction@velocit-ai.fr';
+  logger.info('🔄 Mode développement - redirection vers:', testEmail);
+  return testEmail;
 };
 
 // Types
