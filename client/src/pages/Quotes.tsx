@@ -307,30 +307,39 @@ export default function QuotesPage() {
         },
       });
       
-      const data = await response.json();
-      
-      if (data.success) {
+      if (response.ok) {
+        // Le serveur renvoie maintenant directement le PDF
+        const blob = await response.blob();
+        
+        // Créer un URL temporaire pour le blob
+        const url = window.URL.createObjectURL(blob);
+        
         // Créer un lien de téléchargement
         const link = document.createElement('a');
-        link.href = `/${data.data.pdfPath}`;
+        link.href = url;
         link.download = `Devis_${quote.numero}.pdf`;
-        link.target = '_blank';
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
         
-        // Afficher le message approprié selon la réponse du serveur
-        if (data.data.statusChanged) {
-          toast.success('PDF téléchargé avec succès ! Le devis est maintenant terminé.');
-        } else {
-          toast.success('PDF téléchargé avec succès !');
-        }
+        // Nettoyer
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        toast.success('PDF téléchargé avec succès !');
         
         // Recharger les devis pour refléter le verrouillage
         queryClient.invalidateQueries({ queryKey: ['quotes'] });
       } else {
-        toast.error(`Erreur PDF: ${data.message}${data.details ? ` - ${data.details}` : ''}`);
-        console.error('Erreur PDF:', data);
+        // En cas d'erreur, essayer de lire le message d'erreur
+        let errorMessage = 'Erreur lors de la génération du PDF';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          // Si ce n'est pas du JSON, utiliser le message par défaut
+        }
+        toast.error(errorMessage);
+        console.error('Erreur PDF:', response.status, response.statusText);
       }
     } catch (error: any) {
       toast.error('Erreur lors du téléchargement PDF');
