@@ -10,8 +10,8 @@ const resend = new Resend(process.env.RESEND_API_KEY || '');
 
 // En mode développement, remplacer l'email du destinataire par l'email de test
 const getRecipientEmail = (email: string): string => {
-  // Si on a un domaine vérifié ET qu'on est en production, envoyer au vrai destinataire
-  if (process.env.RESEND_DOMAIN_VERIFIED === 'verified' && process.env.NODE_ENV === 'production') {
+  // En production (sur Render), toujours envoyer au vrai destinataire
+  if (process.env.NODE_ENV === 'production') {
     return email;
   }
   
@@ -20,7 +20,7 @@ const getRecipientEmail = (email: string): string => {
     return email;
   }
   
-  // Sinon, rediriger vers l'email de test
+  // En développement, rediriger vers l'email de test
   return process.env.TEST_EMAIL || 'direction@velocit-ai.fr';
 };
 

@@ -789,8 +789,8 @@ export const downloadQuotePDF = async (req: AuthRequest, res: Response) => {
       // Lire le fichier PDF
       const pdfBuffer = fs.readFileSync(pdfPath);
       
-      // Définir les headers - IMPORTANT: application/octet-stream pour éviter la corruption par le proxy
-      res.setHeader('Content-Type', 'application/octet-stream');
+      // Définir les headers - application/pdf pour éviter la corruption par le proxy
+      res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
       res.setHeader('Content-Length', pdfBuffer.length.toString());
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -798,9 +798,8 @@ export const downloadQuotePDF = async (req: AuthRequest, res: Response) => {
       res.setHeader('Expires', '0');
       res.setHeader('X-Content-Type-Options', 'nosniff');
       
-      // Envoyer le buffer directement en forçant le mode binaire
-      res.type('application/octet-stream');
-      return res.end(pdfBuffer, 'binary');
+      // Envoyer le buffer directement
+      return res.send(pdfBuffer);
       
     } catch (pdfError: any) {
       logger.error('Erreur lors de la génération PDF:', pdfError);
@@ -884,8 +883,8 @@ export const testQuotePDF = async (req: AuthRequest, res: Response) => {
       // Lire le fichier PDF en buffer pour compatibilité avec les proxies (Render, etc.)
       const pdfBuffer = fs.readFileSync(pdfPath);
       
-      // Définir les headers - IMPORTANT: application/octet-stream pour éviter la corruption par le proxy
-      res.setHeader('Content-Type', 'application/octet-stream');
+      // Définir les headers - application/pdf pour éviter la corruption par le proxy
+      res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
       res.setHeader('Content-Length', pdfBuffer.length.toString());
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -893,9 +892,8 @@ export const testQuotePDF = async (req: AuthRequest, res: Response) => {
       res.setHeader('Expires', '0');
       res.setHeader('X-Content-Type-Options', 'nosniff');
       
-      // Envoyer le buffer directement en forçant le mode binaire
-      res.type('application/octet-stream');
-      return res.end(pdfBuffer, 'binary');
+      // Envoyer le buffer directement
+      return res.send(pdfBuffer);
       
     } catch (pdfError: any) {
       logger.error('Erreur lors de la génération PDF:', pdfError);
