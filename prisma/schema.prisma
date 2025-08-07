@@ -9,8 +9,8 @@ datasource db {
 }
 
 model User {
-  id                          String         @id @default(cuid())
-  email                       String         @unique
+  id                          String           @id @default(cuid())
+  email                       String           @unique
   password                    String
   nom                         String
   prenom                      String
@@ -21,16 +21,16 @@ model User {
   adresse                     String?
   codePostal                  String?
   ville                       String?
-  pays                        String         @default("France")
-  isPremium                   Boolean        @default(false)
-  skipArchiveWarning          Boolean        @default(false)
-  createdAt                   DateTime       @default(now())
-  updatedAt                   DateTime       @updatedAt
+  pays                        String           @default("France")
+  isPremium                   Boolean          @default(false)
+  skipArchiveWarning          Boolean          @default(false)
+  createdAt                   DateTime         @default(now())
+  updatedAt                   DateTime         @updatedAt
+  archivedQuotes              ArchivedQuote[]
   contacts                    Contact[]
   genericEmails               GenericEmail[]
   quotes                      Quote[]
   services                    Service[]
-  archivedQuotes              ArchivedQuote[]
   preferences                 UserPreferences?
 
   @@map("users")
@@ -89,7 +89,7 @@ model Quote {
   updatedAt        DateTime        @updatedAt
   emailTracking    EmailTracking[]
   items            QuoteItem[]
-  contact          Contact         @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  contact          Contact         @relation(fields: [contactId], references: [id])
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("quotes")
@@ -184,72 +184,60 @@ model GenericEmail {
   @@map("generic_emails")
 }
 
-// Archivage permanent des devis lors de suppression de contact
 model ArchivedQuote {
-  id               String    @id @default(cuid())
-  
-  // Données originales du devis
-  originalQuoteId  String    @unique
-  userId           String
-  numero           String
-  objet            String
-  statut           String    // Stocké comme string pour préserver l'état final
-  dateCreation     DateTime
-  dateValidite     DateTime
-  dateEnvoi        DateTime?
-  dateAcceptation  DateTime?
-  dateConsultation DateTime?
-  sousTotal        Float
-  tva              Float
-  total            Float
-  conditions       String?
-  notes            String?
-  
-  // Données du contact (snapshot au moment de l'archivage)
-  contactId        String?   // Optionnel car le contact peut être supprimé
-  contactNom       String
-  contactPrenom    String
-  contactEmail     String
-  contactTelephone String?
+  id                String    @id @default(cuid())
+  originalQuoteId   String    @unique
+  userId            String
+  numero            String
+  objet             String
+  statut            String
+  dateCreation      DateTime
+  dateValidite      DateTime
+  dateEnvoi         DateTime?
+  dateAcceptation   DateTime?
+  dateConsultation  DateTime?
+  sousTotal         Float
+  tva               Float
+  total             Float
+  conditions        String?
+  notes             String?
+  contactId         String?
+  contactNom        String
+  contactPrenom     String
+  contactEmail      String
+  contactTelephone  String?
   contactEntreprise String?
-  contactPoste     String?
-  contactAdresse   String?
+  contactPoste      String?
+  contactAdresse    String?
   contactCodePostal String?
-  contactVille     String?
-  contactPays      String    @default("France")
-  
-  // Éléments du devis (JSON pour simplicité)
-  items            Json      // Stockage des QuoteItem en JSON
-  
-  // Données d'archivage
-  archivedAt       DateTime  @default(now())
-  archivedReason   String    // "contact_deletion", "manual_archive", "legal_retention"
-  
-  // Relation avec l'utilisateur (conservée)
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  contactVille      String?
+  contactPays       String    @default("France")
+  items             Json
+  archivedAt        DateTime  @default(now())
+  archivedReason    String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("archived_quotes")
 }
 
 model UserPreferences {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  businessType          String?  // "freelance", "tpe", "pme", "sarl", "sas", "autre"
-  sector                String?  // "conseil", "design", "dev", "marketing", "autre"
-  siret                 String?
-  annualTarget          Decimal  @default(50000) @db.Decimal(10,2)
-  monthlyTarget         Decimal? @db.Decimal(10,2)
-  followUpFrequency     Int      @default(7) // Jours avant relance
-  emailTemplates        Json?    // Templates d'emails personnalisés
-  notificationSettings  Json     @default("{\"emailAlerts\": true, \"dashboardReminders\": true}")
-  onboardingCompleted   Boolean  @default(false)
-  tutorialProgress      Json     @default("{}")  // Progression des tours
-  tutorialPreferences   Json     @default("{\"showTutorials\": true, \"skippedAll\": false}")  // Préférences tutoriel
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  businessType         String?
+  sector               String?
+  siret                String?
+  annualTarget         Decimal  @default(50000) @db.Decimal(10, 2)
+  monthlyTarget        Decimal? @db.Decimal(10, 2)
+  followUpFrequency    Int      @default(7)
+  emailTemplates       Json?
+  notificationSettings Json     @default("{\"emailAlerts\": true, \"dashboardReminders\": true}")
+  onboardingCompleted  Boolean  @default(false)
+  tutorialProgress     Json     @default("{}")
+  tutorialPreferences  Json     @default("{\"skippedAll\": false, \"showTutorials\": true}")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("user_preferences")
 }
 
