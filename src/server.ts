@@ -106,40 +106,55 @@ app.get('/debug-env', (req, res) => {
 });
 
 // DEBUG TEMPORAIRE - Récupérer les logs d'auth
-app.get('/debug-auth-logs', async (req, res) => {
+app.get('/debug-auth-logs', (req, res) => {
+  // Renvoyer simplement les logs console pour l'instant
+  res.json({
+    timestamp: new Date().toISOString(),
+    message: 'Check Render logs for debug output',
+    info: 'Auth debug logs are in console output'
+  });
+});
+
+// DEBUG TEMPORAIRE - Vérifier un compte spécifique
+app.post('/debug-check-account', async (req, res) => {
+  const bcrypt = require('bcryptjs');
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient();
+  
   try {
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
+    const { email, password } = req.body;
     
-    // Compter les utilisateurs
-    const userCount = await prisma.user.count();
-    
-    // Récupérer les emails des utilisateurs
-    const users = await prisma.user.findMany({
-      select: { 
-        email: true, 
-        password: true 
-      }
+    // Rechercher l'utilisateur
+    const user = await prisma.user.findUnique({
+      where: { email }
     });
     
-    await prisma.$disconnect();
+    if (!user) {
+      const allUsers = await prisma.user.findMany({ select: { email: true } });
+      return res.json({
+        found: false,
+        email,
+        allEmails: allUsers.map(u => u.email)
+      });
+    }
     
-    res.json({
-      timestamp: new Date().toISOString(),
-      userCount,
-      users: users.map(u => ({
-        email: u.email,
-        hashPrefix: u.password.substring(0, 7)
-      })),
-      message: 'Debug auth logs - remove after fixing'
+    // Tester le mot de passe
+    const isValid = await bcrypt.compare(password, user.password);
+    
+    return res.json({
+      found: true,
+      email: user.email,
+      id: user.id,
+      hashPrefix: user.password.substring(0, 30),
+      passwordValid: isValid,
+      bcryptRounds: process.env.BCRYPT_ROUNDS || '12 (default)'
     });
   } catch (error: any) {
-    res.json({
-      timestamp: new Date().toISOString(),
-      error: error.message,
-      stack: error.stack,
-      message: 'Error in debug auth logs'
+    return res.json({
+      error: error.message
     });
+  } finally {
+    await prisma.$disconnect();
   }
 });
 
