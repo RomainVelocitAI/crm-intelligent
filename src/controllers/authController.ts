@@ -239,11 +239,29 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const { email, password } = req.body;
+    
+    // DEBUG TEMPORAIRE - À SUPPRIMER
+    console.log(`[AUTH DEBUG] Login attempt for: ${email}`);
+    console.log(`[AUTH DEBUG] Database URL configured: ${!!process.env.DATABASE_URL}`);
+    console.log(`[AUTH DEBUG] Bcrypt rounds: ${config.security.bcryptRounds}`);
 
     // Trouver l'utilisateur
     const user = await prisma.user.findUnique({
       where: { email },
     });
+    
+    // DEBUG TEMPORAIRE - À SUPPRIMER
+    if (user) {
+      console.log(`[AUTH DEBUG] User found: ${user.email}`);
+      console.log(`[AUTH DEBUG] Hash prefix: ${user.password.substring(0, 7)}`);
+    } else {
+      console.log(`[AUTH DEBUG] User NOT found for email: ${email}`);
+      // Lister tous les utilisateurs pour debug
+      const allUsers = await prisma.user.findMany({
+        select: { email: true }
+      });
+      console.log(`[AUTH DEBUG] All users in DB: ${JSON.stringify(allUsers.map(u => u.email))}`);
+    }
 
     if (!user) {
       return res.status(401).json({
@@ -254,6 +272,10 @@ export const login = async (req: Request, res: Response) => {
 
     // Vérifier le mot de passe
     const isValidPassword = await bcrypt.compare(password, user.password);
+    
+    // DEBUG TEMPORAIRE - À SUPPRIMER
+    console.log(`[AUTH DEBUG] Password validation result: ${isValidPassword}`);
+    
     if (!isValidPassword) {
       return res.status(401).json({
         success: false,
