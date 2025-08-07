@@ -879,29 +879,16 @@ export const testQuotePDF = async (req: AuthRequest, res: Response) => {
       // Servir le fichier PDF directement
       const fileName = `Devis_${quote.numero}.pdf`;
       
-      // Utiliser res.sendFile pour une meilleure fiabilité
-      const options = {
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="${fileName}"`
-        }
-      };
+      // Lire le fichier PDF en buffer pour compatibilité avec les proxies (Render, etc.)
+      const pdfBuffer = fs.readFileSync(pdfPath);
       
-      // sendFile nécessite un chemin absolu
-      const absolutePath = path.resolve(pdfPath);
+      // Définir les headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Length', pdfBuffer.length.toString());
       
-      // sendFile gère automatiquement le streaming et la fermeture du fichier
-      return res.sendFile(absolutePath, options, (err) => {
-        if (err) {
-          logger.error('Erreur lors de l\'envoi du fichier PDF:', err);
-          if (!res.headersSent) {
-            res.status(500).json({
-              success: false,
-              message: 'Erreur lors de la lecture du fichier PDF',
-            });
-          }
-        }
-      });
+      // Envoyer le buffer directement (compatible avec les proxies comme Render)
+      return res.send(pdfBuffer);
       
     } catch (pdfError: any) {
       logger.error('Erreur lors de la génération PDF:', pdfError);
