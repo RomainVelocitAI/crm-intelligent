@@ -299,11 +299,11 @@ export default function QuotesPage() {
 
   const handleDownloadPDF = async (quote: Quote) => {
     try {
-      const response = await fetch(`/api/quotes/${quote.id}/test-pdf`, {
-        method: 'POST',
+      // Utilise GET au lieu de POST pour meilleure compatibilité avec proxies/CDN
+      const response = await fetch(`/api/quotes/${quote.id}/download-pdf`, {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
-          'Content-Type': 'application/json',
         },
       });
       

@@ -732,6 +732,103 @@ export const restoreQuote = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Nouvelle fonction pour télécharger le PDF avec GET (compatible avec les proxies/CDN)
+export const downloadQuotePDF = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    // Récupérer le devis
+    const quote = await prisma.quote.findFirst({
+      where: {
+        id,
+        userId: req.user!.id,
+      },
+      include: {
+        contact: true,
+        items: {
+          orderBy: { ordre: 'asc' },
+        },
+        user: true,
+      },
+    });
+    if (!quote) {
+      return res.status(404).json({
+        success: false,
+        message: 'Devis non trouvé',
+      });
+    }
+    try {
+      // Récupérer les informations de l'utilisateur pour déterminer le type de template
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+        select: { isPremium: true }
+      });
+      // Options de génération PDF basées sur le statut premium
+      const pdfOptions = {
+        templateType: user?.isPremium ? TemplateType.PREMIUM : TemplateType.BASIC,
+        isPremium: user?.isPremium || false,
+        customBranding: user?.isPremium ? {
+          colors: {
+            primary: '#007bff',
+            secondary: '#6c757d'
+          }
+        } : undefined
+      };
+      // Génération PDF
+      const pdfPath = await generateQuotePDF(quote as any, pdfOptions);
+      
+      // Vérifier que le fichier existe
+      if (!fs.existsSync(pdfPath)) {
+        logger.error('Fichier PDF non trouvé:', pdfPath);
+        return res.status(404).json({
+          success: false,
+          message: 'Fichier PDF non trouvé',
+        });
+      }
+      
+      // Servir le fichier PDF directement
+      const fileName = `Devis_${quote.numero}.pdf`;
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      // Lire et envoyer le fichier
+      const fileStream = fs.createReadStream(pdfPath);
+      
+      fileStream.on('error', (error: any) => {
+        logger.error('Erreur lors de la lecture du fichier PDF:', error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la lecture du fichier',
+          });
+        }
+      });
+      
+      // Pipe le fichier vers la réponse
+      return fileStream.pipe(res);
+      
+    } catch (pdfError: any) {
+      logger.error('Erreur lors de la génération PDF:', pdfError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la génération du PDF',
+        details: pdfError.message,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Erreur lors du téléchargement PDF:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur interne du serveur',
+      details: error.message,
+    });
+  }
+};
+
+// Fonction existante pour compatibilité (utilise POST)
 export const testQuotePDF = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

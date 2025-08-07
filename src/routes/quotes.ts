@@ -11,6 +11,7 @@ import {
   sendQuote,
   duplicateQuote,
   testQuotePDF,
+  downloadQuotePDF,
   getArchivedQuotes,
   restoreQuote,
   legalArchiveQuote,
@@ -40,7 +41,8 @@ router.delete('/:id', deleteQuote);
 router.post('/:id/validate', validateQuote);
 router.post('/:id/send', sendQuote);
 router.post('/:id/duplicate', duplicateQuote);
-router.post('/:id/test-pdf', testQuotePDF);
+router.post('/:id/test-pdf', testQuotePDF); // Gardé pour compatibilité
+router.get('/:id/download-pdf', downloadQuotePDF); // Nouvelle route GET pour téléchargement (compatible avec proxies/CDN)
 router.post('/:id/restore', restoreQuote);
 router.post('/:id/legal-archive', legalArchiveQuote);
 router.post('/:id/relance', sendQuoteRelanceValidation, sendQuoteRelance);
