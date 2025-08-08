@@ -64,12 +64,13 @@ const getSenderEmail = (): string => {
     return fromEmail;
   }
   
-  // Fallback en production
+  // Fallback en production - essayer contact@velocit-ai.fr en premier
   if (isProduction) {
-    // Utiliser un email par défaut plus approprié
-    const defaultEmail = 'noreply@velocitaleads.com'; // À remplacer par votre domaine
-    logger.warn(`⚠️ Utilisation du fallback email: ${defaultEmail}`);
-    return defaultEmail;
+    // Essayer d'abord contact@velocit-ai.fr qui pourrait être vérifié
+    const fallbackEmail = 'contact@velocit-ai.fr';
+    logger.warn(`⚠️ RESEND_FROM_EMAIL non configuré, utilisation du fallback: ${fallbackEmail}`);
+    logger.warn('⚠️ Configurez RESEND_FROM_EMAIL sur Render pour éviter ce message');
+    return fallbackEmail;
   }
   
   // En développement, onboarding@resend.dev est OK
