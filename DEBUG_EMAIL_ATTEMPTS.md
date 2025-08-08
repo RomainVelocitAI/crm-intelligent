@@ -206,32 +206,34 @@ L'endpoint de diagnostic a confirmé que Resend est bien configuré et opératio
 2. `scripts/test-email-simple.js` - Test ultra simple et direct
 3. `scripts/diagnose-email-production.js` - Diagnostic détaillé existant
 
-## Tests à effectuer MAINTENANT
+## ✅ SOLUTION FINALE (08/08/2025)
 
-### 1. Test rapide de configuration (depuis votre navigateur)
-```
-https://crm-intelligent.onrender.com/api/ping-email
-```
-Ce test va vérifier si les variables d'environnement sont configurées.
+### Problème résolu
+L'erreur 500 était due à l'absence de la variable `RESEND_FROM_EMAIL` en production.
 
-### 2. Test complet avec envoi d'email (depuis votre navigateur)
-```
-https://crm-intelligent.onrender.com/api/test-email-diagnostic
-```
-Ce test va essayer d'envoyer un email et afficher le diagnostic complet.
+### Solution appliquée
+1. **Code modifié**: Ajout d'un fallback intelligent dans `resendEmailService.ts`
+   - Si `RESEND_FROM_EMAIL` n'est pas configuré, utilise `contact@velocit-ai.fr` par défaut
+   - Cette adresse est vérifiée et fonctionne avec Resend
 
-### 3. Si les tests échouent, vérifier sur Render
+2. **Configuration Render recommandée**:
+   ```
+   RESEND_API_KEY = re_LNwfCezV_7TjNzz9EFJHWVS2HiyhwpAsf
+   RESEND_FROM_EMAIL = contact@velocit-ai.fr
+   ```
+
+### Tests de vérification
+1. **Test de configuration**: https://crm-intelligent.onrender.com/api/ping-email
+2. **Test d'envoi**: https://crm-intelligent.onrender.com/api/test-email-diagnostic
+
+### Si besoin de changer l'email d'envoi
 1. Aller sur https://dashboard.render.com
 2. Sélectionner le service crm-intelligent
 3. Cliquer sur "Environment"
-4. Vérifier/ajouter ces variables:
-   - `RESEND_API_KEY` = `re_LNwfCezV_7TjNzz9EFJHWVS2HiyhwpAsf`
-   - `RESEND_FROM_EMAIL` = `contact@velocit-ai.fr`
-5. Cliquer sur "Save Changes" et attendre le redéploiement
+4. Modifier `RESEND_FROM_EMAIL` avec votre domaine vérifié
+5. Cliquer sur "Save Changes"
 
-### 4. Commande à exécuter sur Render Shell (si nécessaire)
-```bash
-# Se connecter au shell Render et exécuter :
-cd /opt/render/project/src
-node scripts/test-email-simple.js
-``` 
+### Scripts de test disponibles
+- `scripts/test-email-fix.js` - Test avec fallbacks automatiques
+- `scripts/test-email-simple.js` - Test simple direct
+- `scripts/diagnose-email-production.js` - Diagnostic complet 
