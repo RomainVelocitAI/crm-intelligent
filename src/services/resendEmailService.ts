@@ -22,21 +22,33 @@ const validateEmailConfig = (): boolean => {
   return true;
 };
 
-// Initialiser Resend avec validation
+// Initialiser Resend avec lazy loading
 let resend: Resend | null = null;
 
-try {
+// Fonction pour obtenir ou créer l'instance Resend
+const getResendInstance = (): Resend => {
+  // Si déjà initialisé, retourner l'instance existante
+  if (resend) {
+    return resend;
+  }
+
+  // Sinon, tenter de créer une nouvelle instance
   const apiKey = process.env.RESEND_API_KEY;
   
-  if (apiKey && apiKey !== '') {
-    resend = new Resend(apiKey);
-    logger.info('✅ Service Resend initialisé avec succès');
-  } else {
-    logger.error('❌ Service Resend non initialisé - RESEND_API_KEY manquante');
+  if (!apiKey || apiKey === '') {
+    logger.error('❌ RESEND_API_KEY manquante ou vide');
+    throw new Error('Service email non configuré. Vérifiez RESEND_API_KEY.');
   }
-} catch (error) {
-  logger.error('❌ Erreur lors de l\'initialisation de Resend:', error);
-}
+
+  try {
+    resend = new Resend(apiKey);
+    logger.info('✅ Service Resend initialisé avec succès (lazy loading)');
+    return resend;
+  } catch (error) {
+    logger.error('❌ Erreur lors de l\'initialisation de Resend:', error);
+    throw new Error('Impossible d\'initialiser le service email');
+  }
+};
 
 // Obtenir l'email d'envoi avec fallback intelligent
 const getSenderEmail = (): string => {
@@ -139,12 +151,8 @@ export const sendQuoteEmail = async (
   customMessage?: string
 ): Promise<void> => {
   try {
-    // Vérifier que Resend est initialisé
-    if (!resend) {
-      const error = new Error('Service email non configuré. Vérifiez RESEND_API_KEY.');
-      logger.error('❌ Tentative d\'envoi d\'email sans Resend initialisé');
-      throw error;
-    }
+    // Obtenir l'instance Resend (lazy loading)
+    const resendClient = getResendInstance();
 
     // Vérifications de sécurité
     if (!quote?.contact?.email) {
@@ -228,7 +236,7 @@ export const sendQuoteEmail = async (
       subject: `Devis ${quote.numero}`
     });
     
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await resendClient.emails.send({
       from: senderEmail,
       to: [recipientEmail],
       replyTo: quote.user.email,
@@ -302,12 +310,8 @@ export const sendQuoteRelanceEmail = async (
   pdfBuffer: Buffer
 ): Promise<void> => {
   try {
-    // Vérifier que Resend est initialisé
-    if (!resend) {
-      const error = new Error('Service email non configuré. Vérifiez RESEND_API_KEY.');
-      logger.error('❌ Tentative d\'envoi d\'email sans Resend initialisé');
-      throw error;
-    }
+    // Obtenir l'instance Resend (lazy loading)
+    const resendClient = getResendInstance();
 
     // Vérifications de sécurité
     if (!quote?.contact?.email) {
@@ -384,7 +388,7 @@ export const sendQuoteRelanceEmail = async (
       logger.info(`📧 Mode dev: Email redirigé de ${to} vers ${recipientEmail}`);
     }
     
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await resendClient.emails.send({
       from: senderEmail,
       to: [recipientEmail],
       replyTo: quote.user.email,
@@ -483,12 +487,8 @@ export const sendTrackedEmail = async (
   userId?: string
 ): Promise<void> => {
   try {
-    // Vérifier que Resend est initialisé
-    if (!resend) {
-      const error = new Error('Service email non configuré. Vérifiez RESEND_API_KEY.');
-      logger.error('❌ Tentative d\'envoi d\'email sans Resend initialisé');
-      throw error;
-    }
+    // Obtenir l'instance Resend (lazy loading)
+    const resendClient = getResendInstance();
 
     // Générer les URLs de tracking pour emails génériques
     let pixelUrl = null;
@@ -542,7 +542,7 @@ export const sendTrackedEmail = async (
       subject: subject
     });
     
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await resendClient.emails.send({
       from: senderEmail,
       to: [recipientEmail],
       subject: recipientEmail !== to ? `${subject} (pour ${to})` : subject,
@@ -637,12 +637,8 @@ export const testEmailConfiguration = async (): Promise<boolean> => {
 // Fonction pour envoyer un email de test
 export const sendTestEmail = async (to: string): Promise<void> => {
   try {
-    // Vérifier que Resend est initialisé
-    if (!resend) {
-      const error = new Error('Service email non configuré. Vérifiez RESEND_API_KEY.');
-      logger.error('❌ Tentative d\'envoi d\'email de test sans Resend initialisé');
-      throw error;
-    }
+    // Obtenir l'instance Resend (lazy loading)
+    const resendClient = getResendInstance();
 
     const recipientEmail = getRecipientEmail(to);
     const senderEmail = getSenderEmail();
@@ -651,7 +647,7 @@ export const sendTestEmail = async (to: string): Promise<void> => {
       logger.info(`📧 Mode dev: Email redirigé de ${to} vers ${recipientEmail}`);
     }
     
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await resendClient.emails.send({
       from: senderEmail,
       to: [recipientEmail],
       subject: `Test - Configuration email VelocitaLeads${recipientEmail !== to ? ` (pour ${to})` : ''}`,
@@ -707,11 +703,8 @@ export const sendWelcomeEmail = async (user: {
   entreprise?: string;
 }): Promise<void> => {
   try {
-    // Vérifier que Resend est initialisé
-    if (!resend) {
-      logger.warn('⚠️ Service email non configuré - Email de bienvenue ignoré');
-      return; // Ne pas bloquer l'inscription
-    }
+    // Obtenir l'instance Resend (lazy loading)
+    const resendClient = getResendInstance();
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -766,7 +759,7 @@ export const sendWelcomeEmail = async (user: {
       logger.info(`📧 Mode dev: Email redirigé de ${user.email} vers ${recipientEmail}`);
     }
     
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await resendClient.emails.send({
       from: senderEmail,
       to: [recipientEmail],
       subject: `Bienvenue sur VelocitaLeads !${recipientEmail !== user.email ? ` (pour ${user.email})` : ''}`,
