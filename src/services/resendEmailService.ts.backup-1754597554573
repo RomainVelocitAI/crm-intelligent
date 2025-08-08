@@ -5,64 +5,8 @@ import { logger, logEmail } from '@/utils/logger';
 
 const prisma = new PrismaClient();
 
-// Vérifier la configuration au démarrage
-const validateEmailConfig = (): boolean => {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL;
-  
-  if (!apiKey || apiKey === '') {
-    logger.error('❌ RESEND_API_KEY manquante ou vide - Les emails ne fonctionneront pas');
-    return false;
-  }
-  
-  if (!fromEmail || fromEmail === 'onboarding@resend.dev') {
-    logger.warn('⚠️ RESEND_FROM_EMAIL invalide - Utilisation du fallback');
-  }
-  
-  return true;
-};
-
-// Initialiser Resend avec validation
-let resend: Resend | null = null;
-
-try {
-  const apiKey = process.env.RESEND_API_KEY;
-  
-  if (apiKey && apiKey !== '') {
-    resend = new Resend(apiKey);
-    logger.info('✅ Service Resend initialisé avec succès');
-  } else {
-    logger.error('❌ Service Resend non initialisé - RESEND_API_KEY manquante');
-  }
-} catch (error) {
-  logger.error('❌ Erreur lors de l\'initialisation de Resend:', error);
-}
-
-// Obtenir l'email d'envoi avec fallback intelligent
-const getSenderEmail = (): string => {
-  const fromEmail = process.env.RESEND_FROM_EMAIL;
-  
-  // En production, ne jamais utiliser onboarding@resend.dev
-  const isProduction = 
-    process.env.NODE_ENV === 'production' || 
-    process.env.RENDER === 'true' ||
-    process.env.IS_PULL_REQUEST === 'false';
-  
-  if (fromEmail && fromEmail !== 'onboarding@resend.dev') {
-    return fromEmail;
-  }
-  
-  // Fallback en production
-  if (isProduction) {
-    // Utiliser un email par défaut plus approprié
-    const defaultEmail = 'noreply@velocitaleads.com'; // À remplacer par votre domaine
-    logger.warn(`⚠️ Utilisation du fallback email: ${defaultEmail}`);
-    return defaultEmail;
-  }
-  
-  // En développement, onboarding@resend.dev est OK
-  return 'onboarding@resend.dev';
-};
+// Initialiser Resend avec la clé API
+const resend = new Resend(process.env.RESEND_API_KEY || '');
 
 // En mode développement, remplacer l'email du destinataire par l'email de test
 const getRecipientEmail = (email: string): string => {
@@ -76,6 +20,7 @@ const getRecipientEmail = (email: string): string => {
   });
   
   // CORRECTION: Forcer la détection de production sur Render
+  // Render définit automatiquement IS_PULL_REQUEST=false en production
   const isProduction = 
     process.env.NODE_ENV === 'production' || 
     process.env.RENDER === 'true' ||
@@ -139,13 +84,6 @@ export const sendQuoteEmail = async (
   customMessage?: string
 ): Promise<void> => {
   try {
-    // Vérifier que Resend est initialisé
-    if (!resend) {
-      const error = new Error('Service email non configuré. Vérifiez RESEND_API_KEY.');
-      logger.error('❌ Tentative d\'envoi d\'email sans Resend initialisé');
-      throw error;
-    }
-
     // Vérifications de sécurité
     if (!quote?.contact?.email) {
       throw new Error('Email du contact manquant');
@@ -215,21 +153,14 @@ export const sendQuoteEmail = async (
 
     // Envoyer l'email avec Resend
     const recipientEmail = getRecipientEmail(quote.contact.email);
-    const senderEmail = getSenderEmail();
     
     // Log si on remplace l'email en dev
     if (recipientEmail !== quote.contact.email) {
       logger.info(`📧 Mode dev: Email redirigé de ${quote.contact.email} vers ${recipientEmail}`);
     }
     
-    logger.info('📨 Tentative d\'envoi d\'email:', {
-      from: senderEmail,
-      to: recipientEmail,
-      subject: `Devis ${quote.numero}`
-    });
-    
     const { data, error } = await resend.emails.send({
-      from: senderEmail,
+      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
       to: [recipientEmail],
       replyTo: quote.user.email,
       subject: `Devis ${quote.numero} - ${quote.objet} ${recipientEmail !== quote.contact.email ? `(pour ${quote.contact.email})` : ''}`,
@@ -243,7 +174,6 @@ export const sendQuoteEmail = async (
     });
 
     if (error) {
-      logger.error('❌ Erreur Resend:', error);
       throw error;
     }
 
@@ -272,7 +202,7 @@ export const sendQuoteEmail = async (
       }
     );
 
-    logger.info('✅ Devis envoyé par email avec succès via Resend', {
+    logger.info('Devis envoyé par email avec succès via Resend', {
       quoteId: quote.id,
       to: quote.contact.email,
       messageId: data?.id,
@@ -288,7 +218,7 @@ export const sendQuoteEmail = async (
       }
     );
 
-    logger.error('❌ Erreur lors de l\'envoi du devis par email via Resend:', error);
+    logger.error('Erreur lors de l\'envoi du devis par email via Resend:', error);
     throw error;
   }
 };
@@ -302,13 +232,6 @@ export const sendQuoteRelanceEmail = async (
   pdfBuffer: Buffer
 ): Promise<void> => {
   try {
-    // Vérifier que Resend est initialisé
-    if (!resend) {
-      const error = new Error('Service email non configuré. Vérifiez RESEND_API_KEY.');
-      logger.error('❌ Tentative d\'envoi d\'email sans Resend initialisé');
-      throw error;
-    }
-
     // Vérifications de sécurité
     if (!quote?.contact?.email) {
       throw new Error('Email du contact manquant');
@@ -378,14 +301,13 @@ export const sendQuoteRelanceEmail = async (
 
     // Envoyer l'email avec Resend
     const recipientEmail = getRecipientEmail(to);
-    const senderEmail = getSenderEmail();
     
     if (recipientEmail !== to) {
       logger.info(`📧 Mode dev: Email redirigé de ${to} vers ${recipientEmail}`);
     }
     
     const { data, error } = await resend.emails.send({
-      from: senderEmail,
+      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
       to: [recipientEmail],
       replyTo: quote.user.email,
       subject,
@@ -399,7 +321,6 @@ export const sendQuoteRelanceEmail = async (
     });
 
     if (error) {
-      logger.error('❌ Erreur Resend:', error);
       throw error;
     }
 
@@ -453,7 +374,7 @@ export const sendQuoteRelanceEmail = async (
       }
     );
 
-    logger.info('✅ Relance de devis envoyée par email avec succès via Resend', {
+    logger.info('Relance de devis envoyée par email avec succès via Resend', {
       quoteId: quote.id,
       to,
       messageId: data?.id,
@@ -469,7 +390,7 @@ export const sendQuoteRelanceEmail = async (
       }
     );
 
-    logger.error('❌ Erreur lors de l\'envoi de la relance par email via Resend:', error);
+    logger.error('Erreur lors de l\'envoi de la relance par email via Resend:', error);
     throw error;
   }
 };
@@ -483,13 +404,6 @@ export const sendTrackedEmail = async (
   userId?: string
 ): Promise<void> => {
   try {
-    // Vérifier que Resend est initialisé
-    if (!resend) {
-      const error = new Error('Service email non configuré. Vérifiez RESEND_API_KEY.');
-      logger.error('❌ Tentative d\'envoi d\'email sans Resend initialisé');
-      throw error;
-    }
-
     // Générer les URLs de tracking pour emails génériques
     let pixelUrl = null;
     let trackingId = null;
@@ -530,27 +444,19 @@ export const sendTrackedEmail = async (
 
     // Envoyer l'email avec Resend
     const recipientEmail = getRecipientEmail(to);
-    const senderEmail = getSenderEmail();
     
     if (recipientEmail !== to) {
       logger.info(`📧 Mode dev: Email redirigé de ${to} vers ${recipientEmail}`);
     }
     
-    logger.info('📨 Tentative d\'envoi d\'email avec tracking:', {
-      from: senderEmail,
-      to: recipientEmail,
-      subject: subject
-    });
-    
     const { data, error } = await resend.emails.send({
-      from: senderEmail,
+      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
       to: [recipientEmail],
       subject: recipientEmail !== to ? `${subject} (pour ${to})` : subject,
       html: htmlContent,
     });
 
     if (error) {
-      logger.error('❌ Erreur Resend:', error);
       throw error;
     }
 
@@ -580,7 +486,7 @@ export const sendTrackedEmail = async (
       }
     );
 
-    logger.info('✅ Email avec tracking envoyé avec succès via Resend', {
+    logger.info('Email avec tracking envoyé avec succès via Resend', {
       contactId,
       to,
       messageId: data?.id,
@@ -596,18 +502,7 @@ export const sendTrackedEmail = async (
       }
     );
 
-    logger.error('❌ Erreur lors de l\'envoi de l\'email avec tracking via Resend:', error);
-    
-    // Améliorer le message d'erreur
-    if (error instanceof Error) {
-      if (error.message.includes('API')) {
-        throw new Error('Configuration email invalide. Vérifiez RESEND_API_KEY dans les variables d\'environnement.');
-      }
-      if (error.message.includes('from')) {
-        throw new Error('Email d\'envoi invalide. Configurez RESEND_FROM_EMAIL avec un domaine vérifié.');
-      }
-    }
-    
+    logger.error('Erreur lors de l\'envoi de l\'email avec tracking via Resend:', error);
     throw error;
   }
 };
@@ -616,20 +511,13 @@ export const sendTrackedEmail = async (
 export const testEmailConfiguration = async (): Promise<boolean> => {
   try {
     if (!process.env.RESEND_API_KEY) {
-      logger.error('❌ Clé API Resend manquante');
+      logger.error('Clé API Resend manquante');
       return false;
     }
-    
-    if (!resend) {
-      logger.error('❌ Service Resend non initialisé');
-      return false;
-    }
-    
-    const senderEmail = getSenderEmail();
-    logger.info(`✅ Configuration email Resend validée (from: ${senderEmail})`);
+    logger.info('Configuration email Resend validée');
     return true;
   } catch (error) {
-    logger.error('❌ Erreur de configuration email Resend:', error);
+    logger.error('Erreur de configuration email Resend:', error);
     return false;
   }
 };
@@ -637,22 +525,14 @@ export const testEmailConfiguration = async (): Promise<boolean> => {
 // Fonction pour envoyer un email de test
 export const sendTestEmail = async (to: string): Promise<void> => {
   try {
-    // Vérifier que Resend est initialisé
-    if (!resend) {
-      const error = new Error('Service email non configuré. Vérifiez RESEND_API_KEY.');
-      logger.error('❌ Tentative d\'envoi d\'email de test sans Resend initialisé');
-      throw error;
-    }
-
     const recipientEmail = getRecipientEmail(to);
-    const senderEmail = getSenderEmail();
     
     if (recipientEmail !== to) {
       logger.info(`📧 Mode dev: Email redirigé de ${to} vers ${recipientEmail}`);
     }
     
     const { data, error } = await resend.emails.send({
-      from: senderEmail,
+      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
       to: [recipientEmail],
       subject: `Test - Configuration email VelocitaLeads${recipientEmail !== to ? ` (pour ${to})` : ''}`,
       html: `
@@ -660,14 +540,11 @@ export const sendTestEmail = async (to: string): Promise<void> => {
           <h2 style="color: #007bff;">Test - Configuration email VelocitaLeads</h2>
           <p>Ceci est un email de test pour vérifier la configuration email de VelocitaLeads avec Resend.</p>
           <p>Si vous recevez cet email, la configuration fonctionne correctement !</p>
-          <hr>
-          <p><small>Envoyé depuis: ${senderEmail}</small></p>
         </div>
       `,
     });
 
     if (error) {
-      logger.error('❌ Erreur Resend:', error);
       throw error;
     }
 
@@ -680,7 +557,7 @@ export const sendTestEmail = async (to: string): Promise<void> => {
       }
     );
 
-    logger.info('✅ Email de test envoyé avec succès via Resend', {
+    logger.info('Email de test envoyé avec succès via Resend', {
       to,
       messageId: data?.id,
     });
@@ -694,7 +571,7 @@ export const sendTestEmail = async (to: string): Promise<void> => {
       }
     );
 
-    logger.error('❌ Erreur lors de l\'envoi de l\'email de test via Resend:', error);
+    logger.error('Erreur lors de l\'envoi de l\'email de test via Resend:', error);
     throw error;
   }
 };
@@ -707,12 +584,6 @@ export const sendWelcomeEmail = async (user: {
   entreprise?: string;
 }): Promise<void> => {
   try {
-    // Vérifier que Resend est initialisé
-    if (!resend) {
-      logger.warn('⚠️ Service email non configuré - Email de bienvenue ignoré');
-      return; // Ne pas bloquer l'inscription
-    }
-
     const htmlContent = `
       <!DOCTYPE html>
       <html lang="fr">
@@ -760,23 +631,20 @@ export const sendWelcomeEmail = async (user: {
     `;
 
     const recipientEmail = getRecipientEmail(user.email);
-    const senderEmail = getSenderEmail();
     
     if (recipientEmail !== user.email) {
       logger.info(`📧 Mode dev: Email redirigé de ${user.email} vers ${recipientEmail}`);
     }
     
     const { data, error } = await resend.emails.send({
-      from: senderEmail,
+      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
       to: [recipientEmail],
       subject: `Bienvenue sur VelocitaLeads !${recipientEmail !== user.email ? ` (pour ${user.email})` : ''}`,
       html: htmlContent,
     });
 
     if (error) {
-      logger.error('❌ Erreur Resend pour email de bienvenue:', error);
-      // Ne pas propager l'erreur pour ne pas bloquer l'inscription
-      return;
+      throw error;
     }
 
     logEmail(
@@ -788,7 +656,7 @@ export const sendWelcomeEmail = async (user: {
       }
     );
 
-    logger.info('✅ Email de bienvenue envoyé avec succès via Resend', {
+    logger.info('Email de bienvenue envoyé avec succès via Resend', {
       to: user.email,
       messageId: data?.id,
     });
@@ -802,13 +670,10 @@ export const sendWelcomeEmail = async (user: {
       }
     );
 
-    logger.error('❌ Erreur lors de l\'envoi de l\'email de bienvenue via Resend:', error);
+    logger.error('Erreur lors de l\'envoi de l\'email de bienvenue via Resend:', error);
     // Ne pas propager l'erreur pour ne pas bloquer l'inscription
   }
 };
-
-// Valider la configuration au démarrage
-validateEmailConfig();
 
 export default {
   sendQuoteEmail,
