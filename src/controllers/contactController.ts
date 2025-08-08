@@ -755,7 +755,8 @@ export const sendEmailToContact = async (req: AuthRequest, res: Response) => {
       subject,
       content,
       contact.id,
-      req.user!.id
+      req.user!.id,
+      user.email // Passer l'email de l'utilisateur pour le reply-to
     );
 
     return res.json({

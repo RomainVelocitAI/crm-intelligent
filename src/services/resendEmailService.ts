@@ -485,7 +485,8 @@ export const sendTrackedEmail = async (
   subject: string,
   content: string,
   contactId?: string,
-  userId?: string
+  userId?: string,
+  userEmail?: string
 ): Promise<void> => {
   try {
     // Obtenir l'instance Resend (lazy loading)
@@ -546,6 +547,7 @@ export const sendTrackedEmail = async (
     const { data, error } = await resendClient.emails.send({
       from: senderEmail,
       to: [recipientEmail],
+      replyTo: userEmail || senderEmail, // Utilise l'email de l'utilisateur pour le reply-to
       subject: recipientEmail !== to ? `${subject} (pour ${to})` : subject,
       html: htmlContent,
     });
